@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "argus"
+name = "argus-sec"
 version = "0.1.0"
 requires-python = ">=3.11"
 description = "Autonomous vulnerability discovery and exploit validation"

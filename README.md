@@ -77,8 +77,19 @@ Reports are published here for research reproducibility. The memory-corruption f
 
 ## Installation
 
+From PyPI (published as `argus-sec`; the CLI command and import name stay `argus`):
+
 ```bash
-# Clone and install with your preferred LLM provider
+pip install "argus-sec[anthropic]"   # Anthropic (default)
+pip install "argus-sec[openai]"      # OpenAI
+pip install "argus-sec[google]"      # Google
+pip install "argus-sec[ollama]"      # Ollama (local models)
+pip install "argus-sec[all-llm]"     # All providers
+```
+
+From source (editable, for development):
+
+```bash
 cd argus
 pip install -e ".[dev,anthropic]"    # Anthropic (default)
 pip install -e ".[dev,openai]"       # OpenAI
