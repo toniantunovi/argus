@@ -1,0 +1,37 @@
+category: crypto
+detection_rules:
+  - name: weak_algorithm
+    instruction: >
+      Flag use of cryptographically broken or weak algorithms for security
+      purposes: MD5, SHA1 for integrity/signatures (not checksums), DES,
+      3DES, RC4, Blowfish, or AES in ECB mode. Check for insufficient key
+      lengths (RSA < 2048 bits, AES < 128 bits, ECDSA < 256 bits). Verify
+      that the weak algorithm is actually used for security (not just
+      non-security checksums or cache keys).
+    min_tier: "conservative"
+
+  - name: key_management
+    instruction: >
+      Look for hardcoded encryption keys, API keys, or secrets in source code.
+      Check for keys derived from weak sources (timestamps, sequential values,
+      short passwords without proper KDF), missing key rotation mechanisms,
+      and keys stored alongside encrypted data. Flag encryption without
+      authenticated encryption (missing HMAC or using AES-CBC without MAC).
+    min_tier: "conservative"
+
+  - name: random_weakness
+    instruction: >
+      Check for use of non-cryptographic PRNGs for security operations:
+      Math.random() in JavaScript, random.random() in Python, rand() in C,
+      java.util.Random in Java. These should use crypto.getRandomValues(),
+      secrets module, /dev/urandom, or SecureRandom respectively when
+      generating tokens, nonces, or session IDs.
+    min_tier: "conservative"
+
+  - name: tls_misconfiguration
+    instruction: >
+      Look for disabled certificate verification (verify=False, NODE_TLS_REJECT_UNAUTHORIZED=0),
+      acceptance of self-signed certificates, use of outdated TLS versions
+      (TLS 1.0, 1.1, SSL), and weak cipher suite configurations. Check for
+      certificate pinning bypass in mobile applications.
+    min_tier: "standard"

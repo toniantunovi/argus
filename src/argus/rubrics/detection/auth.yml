@@ -1,0 +1,46 @@
+category: auth
+detection_rules:
+  - name: authentication_bypass
+    instruction: >
+      Look for functions that access protected resources or perform privileged
+      actions without verifying user identity. Check for missing authentication
+      middleware, endpoints excluded from auth requirements, hardcoded credentials,
+      default passwords, and authentication logic with early returns that skip
+      verification. Pay special attention to alternative code paths that bypass
+      the normal authentication flow.
+    min_tier: "conservative"
+
+  - name: session_management_flaw
+    instruction: >
+      Check for weak session token generation (predictable, short, or non-random
+      tokens), missing session expiry or excessively long session lifetimes,
+      session fixation vulnerabilities where pre-authentication session IDs
+      persist after login, and insecure session storage (cookies without
+      HttpOnly/Secure flags, localStorage for sensitive tokens).
+    min_tier: "conservative"
+
+  - name: authorization_bypass
+    instruction: >
+      Identify missing authorization checks in functions that modify data or
+      access other users' resources. Look for IDOR patterns where user-supplied
+      identifiers (IDs, usernames, filenames) are used to access resources
+      without ownership validation. Check for horizontal privilege escalation
+      where one user can access another user's data.
+    min_tier: "conservative"
+
+  - name: jwt_weakness
+    instruction: >
+      Check for JWT tokens using algorithm 'none', weak signing keys, missing
+      signature verification, tokens that accept multiple algorithms (algorithm
+      confusion), missing expiry validation, and sensitive data stored in
+      unencrypted JWT payloads. Look for custom JWT parsing that may miss
+      edge cases.
+    min_tier: "standard"
+
+  - name: oauth_misconfiguration
+    instruction: >
+      Look for OAuth/OIDC flows with missing state parameter validation, open
+      redirect in callback URLs, token leakage via referrer headers, and
+      insufficient scope validation. Check for authorization code reuse and
+      PKCE bypass in public clients.
+    min_tier: "aggressive"

@@ -1,0 +1,25 @@
+category: auth
+triage_rules:
+  - name: verify_reachability
+    instruction: >
+      Confirm the authentication bypass is reachable from an external entry
+      point. Check if middleware, filters, or decorators enforce authentication
+      before the vulnerable code executes. Trace the request path from the
+      router/URL configuration to the vulnerable function to ensure no
+      authentication check intercepts the request.
+    min_tier: "conservative"
+
+  - name: assess_impact
+    instruction: >
+      Determine what resources become accessible if authentication is bypassed.
+      Rate severity based on data sensitivity (PII, financial, credentials)
+      and action criticality (read vs write vs delete). Consider whether the
+      bypass affects a single endpoint or an entire authentication mechanism.
+    min_tier: "conservative"
+
+  - name: check_compensating_controls
+    instruction: >
+      Verify whether other security controls mitigate the bypass: IP
+      whitelisting, rate limiting, network segmentation, or monitoring/alerting
+      that would detect exploitation attempts.
+    min_tier: "standard"

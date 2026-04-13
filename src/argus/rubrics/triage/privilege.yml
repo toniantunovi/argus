@@ -1,0 +1,17 @@
+category: privilege
+triage_rules:
+  - name: verify_escalation_path
+    instruction: >
+      Confirm a lower-privileged user can actually reach the escalation point.
+      Check for network-level access controls, VPN requirements, IP
+      restrictions, and infrastructure-level authorization that might prevent
+      access to the vulnerable endpoint.
+    min_tier: "conservative"
+
+  - name: assess_privilege_delta
+    instruction: >
+      Determine the difference in privilege between the attacker's starting
+      role and the target role. Escalation from anonymous to admin is critical.
+      Escalation from editor to admin is high. Escalation between equivalent
+      roles is medium. Higher delta means higher severity.
+    min_tier: "conservative"

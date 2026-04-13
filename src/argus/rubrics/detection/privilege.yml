@@ -1,0 +1,36 @@
+category: privilege
+detection_rules:
+  - name: privilege_escalation
+    instruction: >
+      Look for role or permission checks that can be bypassed through parameter
+      manipulation, missing checks on specific endpoints, or logic errors in
+      role hierarchy evaluation. Check for functions that change user roles or
+      permissions without adequate authorization verification. Flag any
+      endpoint where a regular user could invoke admin-only functionality.
+    min_tier: "conservative"
+
+  - name: admin_bypass
+    instruction: >
+      Identify admin endpoints or functions accessible without proper admin
+      authentication. Check for debug or test backdoors present in production
+      code (e.g., ?debug=true, admin routes without middleware). Look for
+      hidden API endpoints that perform privileged operations without
+      authorization checks.
+    min_tier: "conservative"
+
+  - name: sandbox_escape
+    instruction: >
+      Look for operations that could break out of restricted execution
+      environments. Check for file system access, network calls, process
+      spawning, or dynamic code loading in sandboxed contexts. Flag use of
+      eval, exec, subprocess, or similar functions that could escape
+      containerization or process isolation.
+    min_tier: "standard"
+
+  - name: capability_leak
+    instruction: >
+      Check for file descriptors, handles, or tokens leaked across privilege
+      boundaries. Look for child processes inheriting unnecessary capabilities
+      from parent processes. Flag overly broad file permissions set by
+      privileged code that could be exploited by less-privileged processes.
+    min_tier: "aggressive"

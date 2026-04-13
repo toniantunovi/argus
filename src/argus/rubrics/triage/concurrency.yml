@@ -1,0 +1,17 @@
+category: concurrency
+triage_rules:
+  - name: verify_race_window
+    instruction: >
+      Confirm the race window is large enough to be practically exploitable.
+      Check if the operation timing can be influenced by the attacker (e.g.,
+      slow network, large payloads, concurrent connections). Estimate the
+      number of attempts needed for reliable exploitation.
+    min_tier: "conservative"
+
+  - name: assess_race_impact
+    instruction: >
+      Determine the security consequence of winning the race. Privilege
+      escalation or authentication bypass via race condition is critical.
+      Duplicate resource creation is medium. Benign state inconsistency
+      that self-corrects is low.
+    min_tier: "conservative"

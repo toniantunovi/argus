@@ -1,0 +1,25 @@
+category: input
+triage_rules:
+  - name: trace_data_flow
+    instruction: >
+      Follow user input from source (request parameter, header, body) to sink
+      (HTML output, eval, deserialization). Verify no sanitization, encoding,
+      or validation is applied along the path. Identify all intermediate
+      functions that touch the data.
+    min_tier: "conservative"
+
+  - name: check_content_type
+    instruction: >
+      Verify the response content type allows exploitation. For XSS, confirm
+      text/html content type. Check for Content-Security-Policy headers that
+      might mitigate script execution. For deserialization, confirm the
+      attacker controls the serialized data format.
+    min_tier: "conservative"
+
+  - name: evaluate_sanitizer_effectiveness
+    instruction: >
+      If sanitizers exist in the data path, evaluate their effectiveness. Check
+      for bypass techniques: double encoding, alternate character sets, null
+      bytes, and context-specific escaping gaps. Determine if the sanitizer
+      matches the output context (HTML vs URL vs JavaScript vs SQL).
+    min_tier: "standard"

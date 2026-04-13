@@ -1,0 +1,44 @@
+category: data_access
+detection_rules:
+  - name: insecure_data_exposure
+    instruction: >
+      Look for sensitive data (passwords, tokens, PII, financial data) returned
+      in API responses without proper filtering. Check for logging of sensitive
+      fields, debug endpoints that expose internal state, and error messages
+      that leak implementation details. Verify that sensitive data is encrypted
+      at rest and in transit.
+    min_tier: "conservative"
+
+  - name: mass_assignment
+    instruction: >
+      Check for bulk property assignment from user input without explicit
+      whitelisting. Look for ORM models that accept all fields from request
+      bodies (e.g., request.body passed directly to Model.create or update).
+      Flag patterns where user-controllable fields include role, is_admin,
+      permissions, or pricing fields.
+    min_tier: "conservative"
+
+  - name: path_traversal
+    instruction: >
+      Identify file access operations using user-controlled paths without
+      sanitization. Check for directory traversal sequences (../) in file
+      read/write operations, archive extraction (zip slip), and symlink
+      following. Verify that file paths are resolved and validated against
+      an allowed base directory.
+    min_tier: "conservative"
+
+  - name: ssrf
+    instruction: >
+      Look for server-side requests where the URL or hostname is derived from
+      user input. Check for URL parsing bypasses (e.g., using @ in URLs,
+      DNS rebinding, IPv6 addresses, URL shorteners). Verify that internal
+      network access is restricted and cloud metadata endpoints are blocked.
+    min_tier: "standard"
+
+  - name: information_disclosure
+    instruction: >
+      Check for stack traces, database schema details, or internal IP addresses
+      exposed in error responses. Look for debug mode enabled in production,
+      verbose logging of request/response bodies, and API endpoints that
+      enumerate internal resources.
+    min_tier: "aggressive"

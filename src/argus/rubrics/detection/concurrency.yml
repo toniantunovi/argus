@@ -1,0 +1,38 @@
+category: concurrency
+detection_rules:
+  - name: race_condition
+    instruction: >
+      Look for check-then-act patterns without atomic operations or proper
+      locking. Check for TOCTOU (time-of-check-to-time-of-use) vulnerabilities
+      in file operations, permission checks, and balance verifications. Flag
+      patterns where a condition is checked and then acted upon in separate
+      steps without holding a lock or using an atomic operation. Pay special
+      attention to database read-then-write without SELECT FOR UPDATE or
+      equivalent locking.
+    min_tier: "conservative"
+
+  - name: deadlock_potential
+    instruction: >
+      Identify lock acquisition in inconsistent orders across different code
+      paths. Check for nested lock acquisition that could deadlock under
+      concurrent access. Look for database transactions that lock rows in
+      different orders, which could cause database-level deadlocks. Flag
+      blocking operations performed while holding locks.
+    min_tier: "standard"
+
+  - name: data_race
+    instruction: >
+      Look for shared mutable state accessed from multiple threads or async
+      tasks without proper synchronization. Check for global variables modified
+      in request handlers, class-level mutable state in singleton services,
+      and lazy initialization patterns that are not thread-safe. Flag
+      collections modified during iteration in concurrent contexts.
+    min_tier: "standard"
+
+  - name: signal_handler_race
+    instruction: >
+      Check for signal handlers that access shared state or call non-async-safe
+      functions. Look for longjmp from signal handlers, use of malloc/free in
+      signal handlers, and signal handlers that modify global flags without
+      volatile/atomic semantics. Flag re-entrant signal handling issues.
+    min_tier: "aggressive"

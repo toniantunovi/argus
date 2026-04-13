@@ -1,0 +1,26 @@
+# Argus configuration — all fields optional, defaults are sensible.
+# See: https://github.com/argus for full reference.
+
+# scan:
+#   include: []            # paths to scan (default: entire project)
+#   exclude: []            # paths to skip
+#   project_type: auto     # auto | application | library
+
+# validation:
+#   severity_gate: high    # generate PoCs for high+ severity only
+
+# budget:
+#   max_tokens_per_scan: null  # null = unlimited
+
+# llm:
+#   provider: anthropic               # openai | anthropic | google | ollama
+#   model: claude-opus-4-6             # model name for the provider
+#   api_key_env: ANTHROPIC_API_KEY    # env var for API key (auto-detected if omitted)
+#   base_url: null                    # for local models (e.g. http://localhost:11434)
+#   temperature: 0.0
+#   hypothesis:                       # per-layer overrides (all optional)
+#     model: claude-opus-4-6
+#   triage:
+#     model: claude-opus-4-6
+#   validation:
+#     model: claude-opus-4-6

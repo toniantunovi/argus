@@ -1,0 +1,25 @@
+category: financial
+triage_rules:
+  - name: verify_transaction_flow
+    instruction: >
+      Confirm the financial logic flaw is exploitable in a real transaction
+      flow. Check for compensating controls like audit logs, manual review
+      steps, reconciliation processes, and fraud detection systems that might
+      catch exploitation.
+    min_tier: "conservative"
+
+  - name: assess_financial_impact
+    instruction: >
+      Estimate the potential financial loss from exploitation. Consider rate
+      limiting, transaction caps, and monitoring that might detect and stop
+      exploitation. Determine if the impact is limited to a single transaction
+      or if it can be repeatedly exploited at scale.
+    min_tier: "conservative"
+
+  - name: check_idempotency
+    instruction: >
+      Verify whether idempotency mechanisms exist at other layers (payment
+      processor, database constraints, message queue deduplication) that
+      would prevent the financial exploit from succeeding even if the
+      application-level check is missing.
+    min_tier: "standard"

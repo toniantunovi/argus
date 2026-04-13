@@ -1,0 +1,48 @@
+category: memory
+detection_rules:
+  - name: buffer_overflow
+    instruction: >
+      Look for fixed-size buffer operations without bounds checking. Flag use
+      of unsafe C functions: strcpy, strcat, sprintf, gets, scanf without width
+      specifiers. Check for array indexing with user-controlled indices without
+      bounds validation. Look for off-by-one errors in loop bounds and buffer
+      size calculations. Verify that memcpy/memmove length arguments are
+      validated against destination buffer size.
+    min_tier: "conservative"
+
+  - name: use_after_free
+    instruction: >
+      Check for pointers or references used after the underlying memory has
+      been freed or deallocated. Look for dangling references in callback
+      chains, event handlers, and async operations where object lifetime
+      is not properly managed. Flag patterns where a pointer is freed in
+      one code path but used in another (error handling paths are common
+      sources).
+    min_tier: "conservative"
+
+  - name: integer_overflow
+    instruction: >
+      Identify arithmetic operations on sizes, offsets, or counts that could
+      wrap around. Check for unchecked multiplication used in memory allocation
+      sizes (e.g., nmemb * size without overflow check before malloc). Flag
+      signed/unsigned comparison issues and truncation when casting between
+      integer types of different widths.
+    min_tier: "standard"
+
+  - name: format_string
+    instruction: >
+      Look for user-controlled format strings passed to printf-family functions
+      (printf, fprintf, sprintf, snprintf, syslog). Check for format string
+      usage in logging functions that accept variadic arguments. Flag any
+      pattern where the first argument to a format function is not a string
+      literal.
+    min_tier: "standard"
+
+  - name: uninitialized_memory
+    instruction: >
+      Check for use of variables or buffers before initialization. Look for
+      stack-allocated buffers read before being written, struct fields accessed
+      before assignment, and conditional initialization paths where a variable
+      may remain uninitialized. Flag malloc without subsequent memset or
+      initialization when the buffer is later read.
+    min_tier: "aggressive"

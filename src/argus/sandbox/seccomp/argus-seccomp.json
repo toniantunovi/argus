@@ -1,0 +1,10 @@
+{
+    "defaultAction": "SCMP_ACT_ERRNO",
+    "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
+    "syscalls": [
+        {
+            "names": ["read", "write", "open", "close", "stat", "fstat", "lstat", "poll", "lseek", "mmap", "mprotect", "munmap", "brk", "ioctl", "access", "pipe", "dup", "dup2", "nanosleep", "getpid", "socket", "connect", "accept", "sendto", "recvfrom", "bind", "listen", "setsockopt", "getsockopt", "clone", "fork", "vfork", "execve", "exit", "wait4", "kill", "uname", "fcntl", "flock", "fsync", "fdatasync", "truncate", "ftruncate", "getcwd", "chdir", "rename", "mkdir", "rmdir", "unlink", "readlink", "chmod", "chown", "gettimeofday", "getrlimit", "sysinfo", "times", "getuid", "getgid", "geteuid", "getegid", "getppid", "setpgid", "getpgrp", "setsid", "getgroups", "madvise", "shmget", "shmat", "shmctl", "arch_prctl", "set_tid_address", "futex", "set_robust_list", "get_robust_list", "epoll_create", "epoll_ctl", "epoll_wait", "eventfd2", "timerfd_create", "timerfd_settime", "signalfd4", "openat", "mkdirat", "newfstatat", "unlinkat", "renameat", "pread64", "pwrite64", "readv", "writev", "rt_sigaction", "rt_sigprocmask", "rt_sigreturn", "clock_gettime", "clock_nanosleep", "exit_group", "tgkill", "getrandom", "memfd_create", "statx", "rseq", "clone3", "close_range", "faccessat2"],
+            "action": "SCMP_ACT_ALLOW"
+        }
+    ]
+}

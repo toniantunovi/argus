@@ -1,0 +1,68 @@
+category: chains
+chain_rules:
+  - name: privilege_chain
+    instruction: >
+      Identify multi-step privilege escalation chains where combining two or
+      more lower-severity vulnerabilities achieves a higher privilege level
+      than any single vulnerability alone. Look for patterns where an
+      information disclosure feeds into an authentication bypass, or where
+      a low-privilege write primitive enables escalation to admin. Each
+      step in the chain must be independently reachable and the transitions
+      between steps must be feasible.
+    min_tier: "conservative"
+    chain_type: "privilege_escalation"
+    min_steps: 2
+    max_steps: 5
+
+  - name: sandbox_escape
+    instruction: >
+      Detect chains that escape sandboxed or restricted execution environments.
+      Look for combinations of memory corruption + info leak (to bypass ASLR),
+      file write + code loading (to escape chroot/container), or privilege
+      escalation + capability acquisition (to break out of capability-based
+      sandboxes). The chain should demonstrate a clear path from the restricted
+      environment to unrestricted code execution.
+    min_tier: "standard"
+    chain_type: "sandbox_escape"
+    min_steps: 2
+    max_steps: 4
+
+  - name: auth_bypass_chain
+    instruction: >
+      Identify chains that combine multiple weaknesses to bypass authentication
+      entirely. Look for patterns like: SSRF to internal auth service + token
+      forgery, race condition in session management + session fixation,
+      information disclosure of reset tokens + account takeover, or JWT
+      algorithm confusion + signature bypass. Each vulnerability in the chain
+      may be low severity individually but critical when combined.
+    min_tier: "conservative"
+    chain_type: "auth_bypass"
+    min_steps: 2
+    max_steps: 4
+
+  - name: rce_chain
+    instruction: >
+      Detect chains that achieve remote code execution through multiple steps.
+      Common patterns include: file upload + path traversal (upload webshell
+      to accessible location), SQL injection + file write (INTO OUTFILE),
+      SSRF + internal service exploitation, deserialization + gadget chain,
+      or template injection + sandbox escape. The chain should demonstrate
+      a clear path from external input to arbitrary code execution.
+    min_tier: "conservative"
+    chain_type: "remote_code_execution"
+    min_steps: 2
+    max_steps: 6
+
+  - name: mitigation_bypass
+    instruction: >
+      Identify chains where one vulnerability disables or bypasses a security
+      control that protects against another vulnerability. Examples: XSS that
+      steals CSRF tokens enabling CSRF attacks, information disclosure that
+      reveals WAF rules enabling WAF bypass, or configuration manipulation
+      that disables security headers enabling client-side attacks. The chain
+      demonstrates that the defense-in-depth strategy has a gap where
+      compromising one layer exposes another.
+    min_tier: "standard"
+    chain_type: "mitigation_bypass"
+    min_steps: 2
+    max_steps: 4

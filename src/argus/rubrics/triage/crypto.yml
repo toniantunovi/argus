@@ -1,0 +1,17 @@
+category: crypto
+triage_rules:
+  - name: assess_crypto_context
+    instruction: >
+      Determine if the weak cryptographic operation is used for security-critical
+      purposes or merely for non-security functions (checksums, cache keys,
+      ETags). Weak hashing for cache invalidation is low severity. Weak hashing
+      for password storage is critical.
+    min_tier: "conservative"
+
+  - name: check_key_exposure
+    instruction: >
+      Verify if weak key material is actually exposed to attackers or if other
+      controls protect it. A hardcoded key in a server-side-only module is
+      less severe than one in a client-side bundle. Check if key rotation
+      would limit the exposure window.
+    min_tier: "conservative"

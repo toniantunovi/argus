@@ -1,0 +1,37 @@
+category: financial
+detection_rules:
+  - name: race_condition_payment
+    instruction: >
+      Look for payment processing logic without idempotency keys or proper
+      locking. Check for check-then-deduct patterns on account balances that
+      are not atomic. Flag double-spend vulnerabilities where concurrent
+      requests could both pass a balance check before either deduction occurs.
+      Verify that payment state transitions are protected by database
+      transactions with appropriate isolation levels.
+    min_tier: "conservative"
+
+  - name: price_manipulation
+    instruction: >
+      Identify client-controlled price or amount values accepted by the server
+      without validation against server-side pricing data. Check for discount
+      or coupon logic that can be bypassed by manipulating request parameters.
+      Look for negative quantity or amount values that could reverse charges
+      or credit accounts.
+    min_tier: "conservative"
+
+  - name: integer_overflow_currency
+    instruction: >
+      Check for arithmetic operations on currency values that could overflow
+      or lose precision. Flag use of floating-point types (float, double) for
+      monetary calculations where rounding errors could be exploited. Look for
+      integer multiplication without overflow checks in total price calculations
+      (quantity * price).
+    min_tier: "standard"
+
+  - name: business_logic_bypass
+    instruction: >
+      Look for multi-step transaction flows where steps can be skipped or
+      reordered. Check for missing validation of pre-conditions in payment
+      finalization. Flag workflows where a user can modify cart contents
+      after price calculation but before payment processing.
+    min_tier: "standard"

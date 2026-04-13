@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "argus"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "Autonomous vulnerability discovery and exploit validation"
+dependencies = [
+    "langchain-core>=0.3.0",
+    "python-dotenv>=1.0.0",
+    "tree-sitter>=0.23.0",
+    "tree-sitter-language-pack>=0.5.0",
+    "docker>=7.0.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "PyYAML>=6.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "anyio>=4.0.0",
+]
+
+[project.optional-dependencies]
+openai = ["langchain-openai>=0.3.0"]
+anthropic = ["langchain-anthropic>=0.3.0"]
+google = ["langchain-google-genai>=2.0.0"]
+ollama = ["langchain-ollama>=0.3.0"]
+all-llm = [
+    "langchain-openai>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-google-genai>=2.0.0",
+    "langchain-ollama>=0.3.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
+    "coverage>=7.4",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[project.scripts]
+argus = "argus.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "docker: marks tests as requiring Docker daemon",
+]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true

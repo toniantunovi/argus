@@ -1,0 +1,37 @@
+category: input
+detection_rules:
+  - name: xss
+    instruction: >
+      Look for user input reflected in HTML output without proper escaping or
+      encoding. Check for innerHTML assignments, document.write calls, v-html
+      directives, dangerouslySetInnerHTML, and template literals with unescaped
+      variables. Distinguish between reflected XSS (immediate reflection) and
+      stored XSS (persisted then rendered). Verify that Content-Security-Policy
+      headers are present and restrictive.
+    min_tier: "conservative"
+
+  - name: unsafe_deserialization
+    instruction: >
+      Check for deserialization of untrusted data using dangerous functions:
+      Python pickle/shelve/yaml.load (without SafeLoader), Java ObjectInputStream
+      without type filtering, PHP unserialize, Ruby Marshal.load, and .NET
+      BinaryFormatter. Look for custom deserializers that instantiate arbitrary
+      classes based on user input.
+    min_tier: "conservative"
+
+  - name: header_injection
+    instruction: >
+      Identify user input used in HTTP response headers without newline
+      sanitization. Check for CRLF injection in redirect URLs, Set-Cookie
+      values, and custom response headers. Look for response splitting attacks
+      that could enable cache poisoning.
+    min_tier: "standard"
+
+  - name: file_upload
+    instruction: >
+      Check for file upload handlers that rely only on client-side validation
+      or file extension checks. Look for missing content-type validation,
+      uploads stored in web-accessible directories, and missing file size
+      limits. Verify that uploaded files are renamed and stored outside
+      the web root.
+    min_tier: "standard"

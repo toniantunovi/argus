@@ -1,0 +1,25 @@
+category: injection
+triage_rules:
+  - name: verify_injection_path
+    instruction: >
+      Confirm user input reaches the injection sink without adequate
+      sanitization or parameterization. Check for WAF rules, input validation
+      layers, parameterized queries, and prepared statements that might
+      prevent exploitation even if the code looks vulnerable.
+    min_tier: "conservative"
+
+  - name: assess_injection_impact
+    instruction: >
+      Determine what operations are possible through the injection. SQL
+      injection with write access is more severe than read-only. Command
+      injection with full shell access is critical. LDAP injection that
+      bypasses authentication is high. Evaluate the maximum achievable
+      impact given database permissions and OS user context.
+    min_tier: "conservative"
+
+  - name: check_database_permissions
+    instruction: >
+      For SQL injection, verify the database user's permissions. A read-only
+      user limits impact to data exfiltration. A user with FILE privilege
+      or xp_cmdshell access enables OS-level compromise.
+    min_tier: "standard"

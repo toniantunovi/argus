@@ -1,0 +1,24 @@
+category: memory
+triage_rules:
+  - name: check_exploit_mitigations
+    instruction: >
+      Verify which exploit mitigations are enabled: ASLR, DEP/NX, stack
+      canaries, CFI, RELRO, PIE. Assess whether the vulnerability is
+      exploitable with these mitigations active. Some vulnerabilities
+      (info leaks) can bypass ASLR; others require specific conditions.
+    min_tier: "conservative"
+
+  - name: assess_attacker_control
+    instruction: >
+      Determine the degree of control an attacker has over the corrupted
+      memory. Full control of overwritten data and the ability to control
+      the write offset increases severity. Check if the overflow size is
+      attacker-controlled or fixed.
+    min_tier: "conservative"
+
+  - name: evaluate_crash_vs_exploit
+    instruction: >
+      Determine if the memory corruption leads to a controlled exploit or
+      just a crash/DoS. Crashes are lower severity unless they enable other
+      attacks (e.g., crashing a watchdog to disable security monitoring).
+    min_tier: "standard"

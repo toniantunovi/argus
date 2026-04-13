@@ -1,0 +1,24 @@
+category: data_access
+triage_rules:
+  - name: verify_data_sensitivity
+    instruction: >
+      Confirm the exposed data is actually sensitive (PII, credentials,
+      financial records, health data). Check if the data is already publicly
+      accessible or redacted elsewhere in the response pipeline. Classify
+      the data according to sensitivity tiers.
+    min_tier: "conservative"
+
+  - name: check_access_controls
+    instruction: >
+      Verify whether other access controls exist that prevent unauthorized
+      access even if this specific check is missing. Check for defense-in-depth
+      measures like field-level encryption, column-level database permissions,
+      or API gateway filtering.
+    min_tier: "conservative"
+
+  - name: assess_data_volume
+    instruction: >
+      Determine the scope of potential data exposure: single record vs bulk
+      extraction. Check for pagination controls, rate limiting, or query
+      depth limits that constrain the amount of data an attacker could extract.
+    min_tier: "standard"

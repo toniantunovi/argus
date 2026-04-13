@@ -1,0 +1,45 @@
+category: injection
+detection_rules:
+  - name: sql_injection
+    instruction: >
+      Look for string concatenation or string formatting in SQL queries where
+      user input is included. Check for raw SQL queries that bypass ORM
+      protections (e.g., .raw(), .execute() with string formatting). Flag
+      dynamic table or column names constructed from user input even when
+      parameterized queries are used for values. Verify that the query
+      builder or ORM properly parameterizes all user-supplied values.
+    min_tier: "conservative"
+
+  - name: command_injection
+    instruction: >
+      Identify shell command construction using user input. Check for os.system,
+      subprocess with shell=True, exec/eval, backtick execution, Runtime.exec
+      with string concatenation, and child_process.exec in Node.js. Look for
+      incomplete sanitization that blocks some shell metacharacters but misses
+      others (e.g., blocking ; but not | or $()).
+    min_tier: "conservative"
+
+  - name: template_injection
+    instruction: >
+      Look for server-side template rendering with user-controlled template
+      strings. Check for Jinja2 render_template_string, Mako template
+      construction from user input, Freemarker/Velocity template injection,
+      and ERB/Slim template compilation with untrusted input. Flag any
+      pattern where template source (not just variables) comes from user input.
+    min_tier: "standard"
+
+  - name: ldap_injection
+    instruction: >
+      Check for LDAP queries constructed with user input without proper
+      escaping. Look for search filters built through string concatenation
+      where special characters (*, (, ), \, NUL) are not escaped. Flag
+      DN construction from untrusted input.
+    min_tier: "standard"
+
+  - name: xpath_injection
+    instruction: >
+      Identify XPath queries built with user input through string concatenation.
+      Check for XML parsing operations where XPath expressions include
+      unescaped user data. Look for authentication bypasses using XPath
+      injection in login queries (e.g., ' or '1'='1).
+    min_tier: "aggressive"
