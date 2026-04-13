@@ -4,9 +4,11 @@
 
 ```bash
 pip install "argus-sec[anthropic]"
-export ANTHROPIC_API_KEY=...
+export ANTHROPIC_API_KEY=sk-ant-...        # https://console.anthropic.com/settings/keys
 argus scan /path/to/project
 ```
+
+Prefer a `.env` file? Drop `ANTHROPIC_API_KEY=sk-ant-...` into `.env` in the directory you run `argus scan` from — it's picked up automatically.
 
 Reconnaissance is fully deterministic (tree-sitter, no LLM — same codebase always produces the same target list). The LLM layers are rubric-constrained, confidence-gated, and cached. PoC generation runs as an agent loop via [Claw Code](https://github.com/ultraworkers/claw-code) inside a hardened Docker sandbox.
 
