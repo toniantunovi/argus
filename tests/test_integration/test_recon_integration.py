@@ -3,12 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from argus.models.core import Function, Target, ProjectType, SignalCategory
-from argus.recon.call_graph import build_call_graph
-from argus.recon.extractor import extract_functions
-from argus.recon.signals import detect_signals
-from argus.recon.scorer import score_functions
-from argus.recon.prioritizer import prioritize_targets
+from prowl.models.core import Function, Target, ProjectType, SignalCategory
+from prowl.recon.call_graph import build_call_graph
+from prowl.recon.extractor import extract_functions
+from prowl.recon.signals import detect_signals
+from prowl.recon.scorer import score_functions
+from prowl.recon.prioritizer import prioritize_targets
 
 
 class TestFullReconOnPythonApp:

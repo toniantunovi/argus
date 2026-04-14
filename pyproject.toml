@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "argus-sec"
+name = "prowl-sec"
 version = "0.1.0"
 requires-python = ">=3.11"
 description = "Autonomous vulnerability discovery and exploit validation"
@@ -41,7 +41,7 @@ dev = [
 ]
 
 [project.scripts]
-argus = "argus.cli:main"
+prowl = "prowl.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

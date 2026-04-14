@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from argus.recon.parser import detect_language, parse_file, parse_source
+from prowl.recon.parser import detect_language, parse_file, parse_source
 
 
 class TestDetectLanguage:

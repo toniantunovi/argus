@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from argus.cache.store import CacheStore
+from prowl.cache.store import CacheStore
 
 
 class TestPutGet:

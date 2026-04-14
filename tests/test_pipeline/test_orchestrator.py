@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from argus.config import ArgusConfig
-from argus.models.output import Report
-from argus.models.scan import ScanStatus
-from argus.pipeline.orchestrator import ScanOrchestrator
+from prowl.config import ArgusConfig
+from prowl.models.output import Report
+from prowl.models.scan import ScanStatus
+from prowl.pipeline.orchestrator import ScanOrchestrator
 
 from tests.conftest import MockLLMClient, MockSandboxManager
 

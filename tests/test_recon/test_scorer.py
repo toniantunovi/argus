@@ -3,21 +3,21 @@ from pathlib import Path
 
 import pytest
 
-from argus.models.core import (
+from prowl.models.core import (
     Function,
     ProjectType,
     RubricTier,
     SignalCategory,
     VulnerabilityScore,
 )
-from argus.recon.scorer import (
+from prowl.recon.scorer import (
     compute_complexity,
     compute_exposure,
     score_function,
     score_functions,
 )
-from argus.recon.extractor import extract_functions
-from argus.recon.signals import detect_signals
+from prowl.recon.extractor import extract_functions
+from prowl.recon.signals import detect_signals
 
 
 def _make_func(name, source, language="python", **kwargs):

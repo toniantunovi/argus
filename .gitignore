@@ -32,13 +32,13 @@ htmlcov/
 .vscode/
 .claude/
 CLAUDE.md
-argus.md
+prowl.md
 
-# Argus runtime state: ignore everything in .argus/ except tracked artifacts
-.argus/*
-!.argus/suppressions.json
-!.argus/missed.json
-!.argus/rubrics/
+# Prowl runtime state: ignore everything in .prowl/ except tracked artifacts
+.prowl/*
+!.prowl/suppressions.json
+!.prowl/missed.json
+!.prowl/rubrics/
 
 # Local sandbox image build context (images are built, not committed)
 sandbox-images/*

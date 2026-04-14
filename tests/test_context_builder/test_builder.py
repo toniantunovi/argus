@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from argus.models.core import (
+from prowl.models.core import (
     Function,
     SignalCategory,
     Severity,
@@ -11,11 +11,11 @@ from argus.models.core import (
     VulnerabilityScore,
     RiskSignal,
 )
-from argus.models.context import FunctionContext, FindingContext, ExploitContext
-from argus.recon.call_graph import CallGraph, build_call_graph
-from argus.recon.extractor import extract_functions
-from argus.recon.signals import detect_signals
-from argus.context_builder.builder import ContextBuilder
+from prowl.models.context import FunctionContext, FindingContext, ExploitContext
+from prowl.recon.call_graph import CallGraph, build_call_graph
+from prowl.recon.extractor import extract_functions
+from prowl.recon.signals import detect_signals
+from prowl.context_builder.builder import ContextBuilder
 
 
 def _build_test_context(python_app):

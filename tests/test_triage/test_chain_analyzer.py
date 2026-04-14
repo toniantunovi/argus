@@ -3,20 +3,20 @@ from pathlib import Path
 
 import pytest
 
-from argus.models.core import Severity, SignalCategory
-from argus.models.finding import Finding, Classification
-from argus.recon.call_graph import CallGraph
-from argus.triage.chain_analyzer import ChainAnalyzer
+from prowl.models.core import Severity, SignalCategory
+from prowl.models.finding import Finding, Classification
+from prowl.recon.call_graph import CallGraph
+from prowl.triage.chain_analyzer import ChainAnalyzer
 
 from tests.conftest import MockLLMClient
 
 
 def _make_finding(file_path, function_name, classification=Classification.EXPLOITABLE,
                   category=SignalCategory.INJECTION, finding_id=None):
-    fid = finding_id or f"argus-{category.value}-{Path(file_path).name}-1"
+    fid = finding_id or f"prowl-{category.value}-{Path(file_path).name}-1"
     return Finding(
         finding_id=fid,
-        stable_id=f"argus-{category.value}-{Path(file_path).name}::{function_name}",
+        stable_id=f"prowl-{category.value}-{Path(file_path).name}::{function_name}",
         title=f"Vuln in {function_name}",
         description="Test vulnerability",
         severity=Severity.HIGH,

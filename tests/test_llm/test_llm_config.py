@@ -7,7 +7,7 @@ from textwrap import dedent
 import pytest
 import yaml
 
-from argus.config import ArgusConfig, LLMConfig, LLMLayerConfig, load_config
+from prowl.config import ArgusConfig, LLMConfig, LLMLayerConfig, load_config
 
 
 class TestLLMConfigDefaults:
@@ -34,7 +34,7 @@ class TestArgusConfigWithLLM:
         assert config.llm.provider == "anthropic"
 
     def test_load_config_without_llm_section(self, tmp_path):
-        (tmp_path / "argus.yml").write_text("scan:\n  project_type: auto\n")
+        (tmp_path / "prowl.yml").write_text("scan:\n  project_type: auto\n")
         config = load_config(tmp_path)
         assert isinstance(config.llm, LLMConfig)
         assert config.llm.provider == "anthropic"
@@ -48,7 +48,7 @@ class TestArgusConfigWithLLM:
               hypothesis:
                 model: gpt-4o-mini
         """)
-        (tmp_path / "argus.yml").write_text(content)
+        (tmp_path / "prowl.yml").write_text(content)
         config = load_config(tmp_path)
         assert config.llm.provider == "openai"
         assert config.llm.model == "gpt-4o"
@@ -63,7 +63,7 @@ class TestArgusConfigWithLLM:
               model: llama3
               base_url: http://localhost:11434
         """)
-        (tmp_path / "argus.yml").write_text(content)
+        (tmp_path / "prowl.yml").write_text(content)
         config = load_config(tmp_path)
         assert config.llm.provider == "ollama"
         assert config.llm.base_url == "http://localhost:11434"

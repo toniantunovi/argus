@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/argus-sec/
+      url: https://pypi.org/project/prowl-sec/
     permissions:
       id-token: write
     steps:

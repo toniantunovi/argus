@@ -1,15 +1,15 @@
 """Tests for triage classification."""
 import pytest
 
-from argus.models.core import Severity, SignalCategory
-from argus.models.finding import Finding, Classification
-from argus.triage.classifier import should_validate, filter_for_validation
+from prowl.models.core import Severity, SignalCategory
+from prowl.models.finding import Finding, Classification
+from prowl.triage.classifier import should_validate, filter_for_validation
 
 
 def _make_finding(classification, severity, **kwargs):
     return Finding(
-        finding_id="argus-test-file-1",
-        stable_id="argus-test-file::func",
+        finding_id="prowl-test-file-1",
+        stable_id="prowl-test-file::func",
         title="Test Finding",
         description="Test",
         severity=severity,

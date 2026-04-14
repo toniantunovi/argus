@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from argus.recon.extractor import extract_functions
+from prowl.recon.extractor import extract_functions
 
 
 class TestExtractPythonFunctions:

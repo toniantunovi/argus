@@ -2,11 +2,11 @@
 import pytest
 import asyncio
 from pathlib import Path
-from argus.models.core import Function, Target, VulnerabilityScore, SignalCategory, Severity, RubricTier
-from argus.models.hypothesis import Hypothesis, HypothesisResponse
-from argus.models.finding import Finding, Classification
-from argus.models.context import FunctionContext, FindingContext, ExploitContext
-from argus.config import ArgusConfig
+from prowl.models.core import Function, Target, VulnerabilityScore, SignalCategory, Severity, RubricTier
+from prowl.models.hypothesis import Hypothesis, HypothesisResponse
+from prowl.models.finding import Finding, Classification
+from prowl.models.context import FunctionContext, FindingContext, ExploitContext
+from prowl.config import ArgusConfig
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 PYTHON_APP = FIXTURES_DIR / "python_app"

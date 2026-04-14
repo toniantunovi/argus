@@ -7,18 +7,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from argus.config import LLMConfig, SandboxConfig, ValidationConfig
-from argus.models.core import Severity, SignalCategory
-from argus.models.finding import Finding
-from argus.models.poc import ValidationStatus
-from argus.validation.claw_backend import ClawValidationBackend, ValidationOutcome
+from prowl.config import LLMConfig, SandboxConfig, ValidationConfig
+from prowl.models.core import Severity, SignalCategory
+from prowl.models.finding import Finding
+from prowl.models.poc import ValidationStatus
+from prowl.validation.claw_backend import ClawValidationBackend, ValidationOutcome
 
 
 @pytest.fixture
 def memory_finding():
     return Finding(
-        finding_id="argus-memory-test.c-42",
-        stable_id="argus-memory-parser.c::parse_header",
+        finding_id="prowl-memory-test.c-42",
+        stable_id="prowl-memory-parser.c::parse_header",
         title="Buffer Overflow in parse_header",
         description="Heap buffer overflow via unchecked memcpy",
         severity=Severity.HIGH,
@@ -84,8 +84,8 @@ class TestClawPromptConstruction:
 
     def test_prompt_contains_asan_instructions_for_memory(self, claw_backend, memory_finding, target, exploit_context):
         prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
-        assert "fsanitize=address" in prompt
-        assert "ARGUS_POC_CONFIRMED" in prompt
+        assert "Sanitizer Instrumentation" in prompt
+        assert "ARGUS_VALIDATED" in prompt
 
     def test_prompt_contains_target_source(self, claw_backend, memory_finding, target, exploit_context):
         prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
@@ -93,7 +93,7 @@ class TestClawPromptConstruction:
 
     def test_prompt_contains_max_turns(self, claw_backend, memory_finding, target, exploit_context):
         prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
-        assert "30" in prompt
+        assert "50" in prompt  # claw_max_turns_build default
 
 
 class TestClawApiKeyResolution:
@@ -125,12 +125,12 @@ class TestClawApiKeyResolution:
 
 
 class TestClawTimeout:
-    def test_memory_category_uses_memory_timeout(self, claw_backend, memory_finding):
-        assert claw_backend._get_timeout(memory_finding) == 1080
+    def test_always_uses_build_timeout(self, claw_backend, memory_finding):
+        assert claw_backend._get_timeout(memory_finding) == 1800  # claw_timeout_build
 
-    def test_other_category_uses_default_timeout(self, claw_backend, memory_finding):
+    def test_other_category_also_uses_build_timeout(self, claw_backend, memory_finding):
         memory_finding.category = SignalCategory.INJECTION
-        assert claw_backend._get_timeout(memory_finding) == 720
+        assert claw_backend._get_timeout(memory_finding) == 1800
 
 
 class TestClawResultParsing:
@@ -139,7 +139,8 @@ class TestClawResultParsing:
             "stdout": "",
             "stderr": "==12345==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x60200000ef80",
             "exit_code": 1,
-            "poc_code": "int main() {}",
+            "test_script": "",
+            "build_log": "",
         }
         outcome = claw_backend._parse_result(memory_finding, result)
         assert outcome.status == ValidationStatus.CONFIRMED
@@ -147,10 +148,22 @@ class TestClawResultParsing:
 
     def test_confirmation_marker_confirms(self, claw_backend, memory_finding):
         result = {
+            "stdout": "ARGUS_VALIDATED",
+            "stderr": "",
+            "exit_code": 0,
+            "test_script": "",
+            "build_log": "",
+        }
+        outcome = claw_backend._parse_result(memory_finding, result)
+        assert outcome.status == ValidationStatus.CONFIRMED
+
+    def test_legacy_marker_also_confirms(self, claw_backend, memory_finding):
+        result = {
             "stdout": "ARGUS_POC_CONFIRMED",
             "stderr": "",
             "exit_code": 0,
-            "poc_code": "int main() {}",
+            "test_script": "",
+            "build_log": "",
         }
         outcome = claw_backend._parse_result(memory_finding, result)
         assert outcome.status == ValidationStatus.CONFIRMED
@@ -160,20 +173,23 @@ class TestClawResultParsing:
             "stdout": "Nothing happened",
             "stderr": "",
             "exit_code": 0,
-            "poc_code": "",
+            "test_script": "",
+            "build_log": "",
         }
         outcome = claw_backend._parse_result(memory_finding, result)
         assert outcome.status == ValidationStatus.FAILED
 
-    def test_poc_code_captured(self, claw_backend, memory_finding):
+    def test_test_script_captured(self, claw_backend, memory_finding):
         result = {
-            "stdout": "ARGUS_POC_CONFIRMED",
+            "stdout": "ARGUS_VALIDATED",
             "stderr": "",
             "exit_code": 0,
-            "poc_code": '#include <stdio.h>\nint main() { printf("overflow"); }',
+            "test_script": '#!/bin/bash\n./build/curl --data "AAAA" http://localhost',
+            "build_log": "",
         }
         outcome = claw_backend._parse_result(memory_finding, result)
-        assert "stdio" in outcome.poc_code
+        assert "curl" in outcome.test_script
+        assert outcome.poc_code == outcome.test_script
 
 
 class TestValidationOutcome:
@@ -247,10 +263,10 @@ class TestDockerPreFlight:
 
 class TestEngineUsesClaw:
     def test_engine_creates_claw_backend(self):
-        from argus.validation.engine import ValidationEngine
+        from prowl.validation.engine import ValidationEngine
         from tests.conftest import MockLLMClient, MockSandboxManager
-        from argus.context_builder.builder import ContextBuilder
-        from argus.llm.budget import TokenBudget
+        from prowl.context_builder.builder import ContextBuilder
+        from prowl.llm.budget import TokenBudget
 
         engine = ValidationEngine(
             llm_client=MockLLMClient(),
@@ -267,10 +283,10 @@ class TestEngineFailureLogging:
 
     @pytest.fixture
     def engine_deps(self):
-        from argus.validation.engine import ValidationEngine
+        from prowl.validation.engine import ValidationEngine
         from tests.conftest import MockLLMClient, MockSandboxManager
-        from argus.context_builder.builder import ContextBuilder
-        from argus.llm.budget import TokenBudget
+        from prowl.context_builder.builder import ContextBuilder
+        from prowl.llm.budget import TokenBudget
 
         return {
             "llm_client": MockLLMClient(),
@@ -287,7 +303,7 @@ class TestEngineFailureLogging:
 
     @pytest.mark.asyncio
     async def test_docker_unavailable_aborts_with_stats(self, engine_deps, finding_and_target):
-        from argus.validation.engine import ValidationEngine
+        from prowl.validation.engine import ValidationEngine
 
         engine = ValidationEngine(**engine_deps)
         engine.claw.check_docker = lambda: "Connection refused"
@@ -302,7 +318,7 @@ class TestEngineFailureLogging:
 
     @pytest.mark.asyncio
     async def test_no_target_match_tracked_in_stats(self, engine_deps, memory_finding):
-        from argus.validation.engine import ValidationEngine
+        from prowl.validation.engine import ValidationEngine
 
         engine = ValidationEngine(**engine_deps)
         engine.claw.check_docker = lambda: None
@@ -315,7 +331,7 @@ class TestEngineFailureLogging:
 
     @pytest.mark.asyncio
     async def test_failed_outcome_sets_validation_method(self, engine_deps, finding_and_target):
-        from argus.validation.engine import ValidationEngine
+        from prowl.validation.engine import ValidationEngine
 
         engine = ValidationEngine(**engine_deps)
         engine.claw.check_docker = lambda: None
@@ -338,7 +354,7 @@ class TestEngineFailureLogging:
 
     @pytest.mark.asyncio
     async def test_skipped_outcome_sets_validation_method(self, engine_deps, finding_and_target):
-        from argus.validation.engine import ValidationEngine
+        from prowl.validation.engine import ValidationEngine
 
         engine = ValidationEngine(**engine_deps)
         engine.claw.check_docker = lambda: None
@@ -360,7 +376,7 @@ class TestEngineFailureLogging:
 
     @pytest.mark.asyncio
     async def test_confirmed_outcome_tracked(self, engine_deps, finding_and_target):
-        from argus.validation.engine import ValidationEngine
+        from prowl.validation.engine import ValidationEngine
 
         engine = ValidationEngine(**engine_deps)
         engine.claw.check_docker = lambda: None
@@ -384,7 +400,7 @@ class TestEngineFailureLogging:
 
     @pytest.mark.asyncio
     async def test_all_failed_flag(self, engine_deps, finding_and_target):
-        from argus.validation.engine import ValidationEngine
+        from prowl.validation.engine import ValidationEngine
 
         engine = ValidationEngine(**engine_deps)
         engine.claw.check_docker = lambda: None
@@ -400,3 +416,279 @@ class TestEngineFailureLogging:
         stats = await engine.run([finding], targets)
 
         assert stats.all_failed is True
+
+
+class TestBuildProjectPrompt:
+    """Tests for the build-project prompt structure."""
+
+    def test_c_prompt_has_build_phases(self, claw_backend, memory_finding, target, exploit_context):
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "Phase 1: Explore Build System" in prompt
+        assert "Phase 2: Build with Sanitizer Instrumentation" in prompt
+        assert "Phase 3: Identify Trigger Path" in prompt
+        assert "Phase 4: Craft Input and Run" in prompt
+        assert "Phase 5: Verify Reachability" in prompt
+
+    def test_c_prompt_forbids_standalone_poc(self, claw_backend, memory_finding, target, exploit_context):
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "DO NOT write standalone PoC" in prompt
+        assert "build and run the ACTUAL project" in prompt
+
+    def test_c_prompt_includes_build_system_commands(self, claw_backend, memory_finding, target, exploit_context):
+        exploit_context.build_system_hint = "cmake"
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "cmake" in prompt
+        assert "CMAKE_C_FLAGS" in prompt
+
+    def test_c_prompt_includes_function_name_in_verify(self, claw_backend, memory_finding, target, exploit_context):
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "`parse_header`" in prompt
+
+    def test_python_prompt_has_install_and_start(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "python"
+        memory_finding.category = SignalCategory.INJECTION
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "pip install" in prompt
+        assert "Start the actual application" in prompt
+        assert "curl" in prompt.lower() or "requests" in prompt.lower()
+
+    def test_node_prompt_has_npm_install(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "node"
+        memory_finding.category = SignalCategory.INJECTION
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "npm install" in prompt
+
+    def test_go_prompt_has_go_build(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "go"
+        memory_finding.category = SignalCategory.INJECTION
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "go build" in prompt
+
+    def test_rust_prompt_has_cargo_build(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "rust"
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "cargo build" in prompt
+
+    def test_java_prompt_has_maven_or_gradle(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "java"
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "mvn package" in prompt or "gradle build" in prompt
+
+
+class TestBuildSystemDetection:
+    """Tests for build system detection in the context builder."""
+
+    def test_cmake_detected(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "CMakeLists.txt").touch()
+        assert detect_build_system(str(tmp_path)) == "cmake"
+
+    def test_autotools_detected(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "configure.ac").touch()
+        assert detect_build_system(str(tmp_path)) == "autotools"
+
+    def test_meson_detected(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "meson.build").touch()
+        assert detect_build_system(str(tmp_path)) == "meson"
+
+    def test_makefile_detected(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "Makefile").touch()
+        assert detect_build_system(str(tmp_path)) == "make"
+
+    def test_npm_detected(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "package.json").touch()
+        assert detect_build_system(str(tmp_path)) == "npm"
+
+    def test_pip_detected(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "pyproject.toml").touch()
+        assert detect_build_system(str(tmp_path)) == "pip"
+
+    def test_cargo_detected(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "Cargo.toml").touch()
+        assert detect_build_system(str(tmp_path)) == "cargo"
+
+    def test_go_detected(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "go.mod").touch()
+        assert detect_build_system(str(tmp_path)) == "go"
+
+    def test_cmake_takes_priority_over_makefile(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        (tmp_path / "CMakeLists.txt").touch()
+        (tmp_path / "Makefile").touch()
+        assert detect_build_system(str(tmp_path)) == "cmake"
+
+    def test_no_build_system(self, tmp_path):
+        from prowl.context_builder.builder import detect_build_system
+        assert detect_build_system(str(tmp_path)) is None
+
+    def test_nonexistent_dir(self):
+        from prowl.context_builder.builder import detect_build_system
+        assert detect_build_system("/nonexistent/path") is None
+
+
+class TestInstrumentationHelpers:
+    """Tests for build-system-specific sanitizer injection."""
+
+    def test_cmake_sanitizer_args(self):
+        from prowl.sandbox.instrumentation import get_cmake_sanitizer_args
+        result = get_cmake_sanitizer_args(["asan", "ubsan"])
+        assert "CMAKE_C_FLAGS" in result
+        assert "CMAKE_CXX_FLAGS" in result
+        assert "fsanitize=address" in result
+        assert "fsanitize=undefined" in result
+
+    def test_autotools_sanitizer_env(self):
+        from prowl.sandbox.instrumentation import get_autotools_sanitizer_env
+        result = get_autotools_sanitizer_env(["asan", "ubsan"])
+        assert "CFLAGS=" in result
+        assert "LDFLAGS=" in result
+        assert "fsanitize=address" in result
+
+    def test_meson_sanitizer_args(self):
+        from prowl.sandbox.instrumentation import get_meson_sanitizer_args
+        result = get_meson_sanitizer_args(["asan", "ubsan"])
+        assert "b_sanitize=" in result
+        assert "address" in result
+        assert "undefined" in result
+
+    def test_make_sanitizer_override(self):
+        from prowl.sandbox.instrumentation import get_make_sanitizer_override
+        result = get_make_sanitizer_override(["asan"])
+        assert "CFLAGS=" in result
+        assert "fsanitize=address" in result
+
+    def test_empty_instrumentation(self):
+        from prowl.sandbox.instrumentation import get_meson_sanitizer_args
+        assert get_meson_sanitizer_args([]) == ""
+
+
+class TestEnrichedDockerfile:
+    """Tests for the enriched build-project Docker images."""
+
+    def test_c_has_cmake_and_autotools(self, claw_backend):
+        df = claw_backend._get_claw_dockerfile("c")
+        assert "cmake" in df
+        assert "autoconf" in df
+        assert "libssl-dev" in df
+
+    def test_c_has_claw_binary(self, claw_backend):
+        df = claw_backend._get_claw_dockerfile("c")
+        assert "COPY --from=claw-builder" in df
+        assert "cargo build" in df
+
+    def test_python_has_gcc_and_git(self, claw_backend):
+        df = claw_backend._get_claw_dockerfile("python")
+        assert "gcc" in df
+        assert "git" in df
+
+    def test_node_has_build_tools(self, claw_backend):
+        df = claw_backend._get_claw_dockerfile("node")
+        assert "node:20" in df
+        assert "git" in df
+
+    def test_go_image(self, claw_backend):
+        df = claw_backend._get_claw_dockerfile("go")
+        assert "golang:" in df
+
+    def test_rust_image(self, claw_backend):
+        df = claw_backend._get_claw_dockerfile("rust")
+        assert "rust:" in df
+
+    def test_java_has_maven(self, claw_backend):
+        df = claw_backend._get_claw_dockerfile("java")
+        assert "maven" in df
+
+
+class TestTargetFunctionInTrace:
+    """Tests for target function detection in ASAN traces."""
+
+    def test_asan_with_target_function_in_trace(self, claw_backend, memory_finding):
+        result = {
+            "stdout": "",
+            "stderr": (
+                "==12345==ERROR: AddressSanitizer: heap-buffer-overflow\n"
+                "    #0 0x55 in parse_header /src/parser.c:42\n"
+            ),
+            "exit_code": 1,
+            "test_script": "#!/bin/bash\n./curl http://evil",
+            "build_log": "",
+        }
+        outcome = claw_backend._parse_result(memory_finding, result)
+        assert outcome.status == ValidationStatus.CONFIRMED
+        assert "parse_header" in outcome.success_evidence
+
+    def test_asan_without_target_function_in_trace(self, claw_backend, memory_finding):
+        result = {
+            "stdout": "",
+            "stderr": (
+                "==12345==ERROR: AddressSanitizer: heap-buffer-overflow\n"
+                "    #0 0x55 in other_function /src/other.c:10\n"
+            ),
+            "exit_code": 1,
+            "test_script": "",
+            "build_log": "",
+        }
+        outcome = claw_backend._parse_result(memory_finding, result)
+        assert outcome.status == ValidationStatus.CONFIRMED
+        assert outcome.success_evidence == "asan"
+
+    def test_validated_marker(self, claw_backend, memory_finding):
+        result = {
+            "stdout": "ARGUS_VALIDATED",
+            "stderr": "",
+            "exit_code": 0,
+            "test_script": "",
+            "build_log": "",
+        }
+        outcome = claw_backend._parse_result(memory_finding, result)
+        assert outcome.status == ValidationStatus.CONFIRMED
+        assert outcome.success_evidence == "marker"
+
+
+class TestEngineRecordsStrategy:
+    """Tests that the validation engine records the strategy on findings."""
+
+    @pytest.fixture
+    def engine_deps(self):
+        from prowl.validation.engine import ValidationEngine
+        from tests.conftest import MockLLMClient, MockSandboxManager
+        from prowl.context_builder.builder import ContextBuilder
+        from prowl.llm.budget import TokenBudget
+
+        return {
+            "llm_client": MockLLMClient(),
+            "sandbox": MockSandboxManager(),
+            "context_builder": ContextBuilder(MagicMock(), MagicMock()),
+            "budget": TokenBudget(),
+            "target_dir": Path("/tmp/test"),
+        }
+
+    @pytest.mark.asyncio
+    async def test_strategy_recorded_on_finding(self, engine_deps, memory_finding, target):
+        from prowl.validation.engine import ValidationEngine
+
+        engine = ValidationEngine(**engine_deps)
+        engine.claw.check_docker = lambda: None
+
+        async def mock_validate(finding, target, context, max_iter):
+            return ValidationOutcome(
+                status=ValidationStatus.CONFIRMED,
+                test_script="#!/bin/bash\n./binary --crash",
+                iterations_used=3,
+                success_evidence="asan",
+            )
+        engine.claw.validate = mock_validate
+
+        targets = {target.target_id: target}
+        stats = await engine.run([memory_finding], targets)
+
+        assert stats.confirmed == 1
+        assert memory_finding.validation_strategy == "build_project"
+        assert "binary" in memory_finding.poc_code

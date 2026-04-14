@@ -3,12 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from argus.models.core import Severity, SignalCategory
-from argus.models.finding import Finding, Classification
-from argus.suppression.manager import SuppressionManager
+from prowl.models.core import Severity, SignalCategory
+from prowl.models.finding import Finding, Classification
+from prowl.suppression.manager import SuppressionManager
 
 
-def _make_finding(finding_id="argus-injection-app.py-10", stable_id="argus-injection-app.py::func",
+def _make_finding(finding_id="prowl-injection-app.py-10", stable_id="prowl-injection-app.py::func",
                   function_name="func", file_path="/app.py", category=SignalCategory.INJECTION):
     return Finding(
         finding_id=finding_id,
@@ -29,7 +29,7 @@ def _make_finding(finding_id="argus-injection-app.py-10", stable_id="argus-injec
 class TestSuppressAndCheck:
     def test_suppress_finding(self, tmp_path):
         mgr = SuppressionManager(tmp_path)
-        mgr.suppress("argus-injection-app.py-10", reason="False positive")
+        mgr.suppress("prowl-injection-app.py-10", reason="False positive")
         f = _make_finding()
         assert mgr.is_suppressed(f)
 
@@ -40,8 +40,8 @@ class TestSuppressAndCheck:
 
     def test_suppress_by_stable_id(self, tmp_path):
         mgr = SuppressionManager(tmp_path)
-        mgr.suppress("argus-injection-app.py::func", reason="Known issue",
-                      stable_id="argus-injection-app.py::func")
+        mgr.suppress("prowl-injection-app.py::func", reason="Known issue",
+                      stable_id="prowl-injection-app.py::func")
         f = _make_finding()
         assert mgr.is_suppressed(f)
 
@@ -89,8 +89,8 @@ class TestScopeProject:
 class TestUnsuppress:
     def test_unsuppress_existing(self, tmp_path):
         mgr = SuppressionManager(tmp_path)
-        mgr.suppress("argus-injection-app.py-10", reason="FP")
-        result = mgr.unsuppress("argus-injection-app.py-10")
+        mgr.suppress("prowl-injection-app.py-10", reason="FP")
+        result = mgr.unsuppress("prowl-injection-app.py-10")
         assert result is True
         f = _make_finding()
         assert not mgr.is_suppressed(f)
@@ -118,7 +118,7 @@ class TestOrphanDetection:
 
     def test_no_orphans_when_all_match(self, tmp_path):
         mgr = SuppressionManager(tmp_path)
-        mgr.suppress("argus-injection-app.py-10", reason="Known")
+        mgr.suppress("prowl-injection-app.py-10", reason="Known")
 
         current_findings = [_make_finding()]
         orphans = mgr.detect_orphans(current_findings)
@@ -128,18 +128,18 @@ class TestOrphanDetection:
 class TestFilterFindings:
     def test_filter_removes_suppressed(self, tmp_path):
         mgr = SuppressionManager(tmp_path)
-        mgr.suppress("argus-injection-app.py-10", reason="FP")
+        mgr.suppress("prowl-injection-app.py-10", reason="FP")
 
         findings = [
             _make_finding(),
-            _make_finding(finding_id="argus-auth-app.py-20",
-                          stable_id="argus-auth-app.py::other",
+            _make_finding(finding_id="prowl-auth-app.py-20",
+                          stable_id="prowl-auth-app.py::other",
                           function_name="other",
                           category=SignalCategory.AUTH),
         ]
         filtered = mgr.filter_findings(findings)
         assert len(filtered) == 1
-        assert filtered[0].finding_id == "argus-auth-app.py-20"
+        assert filtered[0].finding_id == "prowl-auth-app.py-20"
 
     def test_filter_empty_list(self, tmp_path):
         mgr = SuppressionManager(tmp_path)

@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from argus.models.core import Function, SignalCategory
-from argus.recon.signals import detect_signals
+from prowl.models.core import Function, SignalCategory
+from prowl.recon.signals import detect_signals
 
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
@@ -24,7 +24,7 @@ def _make_func(name, source, language="python", **kwargs):
 
 class TestSQLInjectionSignals:
     def test_get_user_has_data_access_signals(self, python_app):
-        from argus.recon.extractor import extract_functions
+        from prowl.recon.extractor import extract_functions
 
         funcs = extract_functions(python_app / "app.py")
         get_user = next(f for f in funcs if f.name == "get_user")
@@ -53,7 +53,7 @@ class TestSQLInjectionSignals:
 
 class TestCommandInjectionSignals:
     def test_run_command_has_injection_signals(self, python_app):
-        from argus.recon.extractor import extract_functions
+        from prowl.recon.extractor import extract_functions
 
         funcs = extract_functions(python_app / "app.py")
         run_cmd = next(f for f in funcs if f.name == "run_command")
@@ -76,7 +76,7 @@ class TestCommandInjectionSignals:
 
 class TestMemorySignals:
     def test_parse_header_has_memory_signals(self, c_project):
-        from argus.recon.extractor import extract_functions
+        from prowl.recon.extractor import extract_functions
 
         funcs = extract_functions(c_project / "vuln.c")
         parse_header = next(f for f in funcs if f.name == "parse_header")
@@ -111,7 +111,7 @@ class TestMemorySignals:
 
 class TestCryptoSignals:
     def test_validate_token_has_crypto_signals(self, python_app):
-        from argus.recon.extractor import extract_functions
+        from prowl.recon.extractor import extract_functions
 
         funcs = extract_functions(python_app / "app.py")
         vt = next(f for f in funcs if f.name == "validate_token")
@@ -171,7 +171,7 @@ class TestAuthSignals:
 
 class TestNoSignals:
     def test_safe_copy_minimal_signals(self, c_project):
-        from argus.recon.extractor import extract_functions
+        from prowl.recon.extractor import extract_functions
 
         funcs = extract_functions(c_project / "safe.c")
         safe_copy = next(f for f in funcs if f.name == "safe_copy")

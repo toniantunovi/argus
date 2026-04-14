@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from argus.models.core import Function
-from argus.recon.call_graph import CallGraph, build_call_graph
-from argus.recon.extractor import extract_functions
+from prowl.models.core import Function
+from prowl.recon.call_graph import CallGraph, build_call_graph
+from prowl.recon.extractor import extract_functions
 
 
 class TestBuildCallGraph:

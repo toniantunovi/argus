@@ -1,20 +1,20 @@
-# Argus
+# Prowl
 
-> **Autonomous vulnerability discovery and exploit validation.** Argus reads a codebase, generates hypotheses, and writes working proof-of-concept exploits inside a Docker sandbox — compiled against the real source, confirmed by ASAN crashes, injection markers, or brute-force success.
+> **Autonomous vulnerability discovery and exploit validation.** Prowl reads a codebase, generates hypotheses, and writes working proof-of-concept exploits inside a Docker sandbox — compiled against the real source, confirmed by ASAN crashes, injection markers, or brute-force success.
 
 ```bash
-pip install "argus-sec[anthropic]"
+pip install "prowl-sec[anthropic]"
 export ANTHROPIC_API_KEY=sk-ant-...        # https://console.anthropic.com/settings/keys
-argus scan /path/to/project
+prowl scan /path/to/project
 ```
 
-Prefer a `.env` file? Drop `ANTHROPIC_API_KEY=sk-ant-...` into `.env` in the directory you run `argus scan` from — it's picked up automatically.
+Prefer a `.env` file? Drop `ANTHROPIC_API_KEY=sk-ant-...` into `.env` in the directory you run `prowl scan` from — it's picked up automatically.
 
 Reconnaissance is fully deterministic (tree-sitter, no LLM — same codebase always produces the same target list). The LLM layers are rubric-constrained, confidence-gated, and cached. PoC generation runs as an agent loop via [Claw Code](https://github.com/ultraworkers/claw-code) inside a hardened Docker sandbox.
 
 ## What it found
 
-Running Argus against five widely deployed open-source projects produced **16 validated exploit PoCs**. Full reports with PoC source, ASAN output, and reproduction steps: [`reports/`](reports/).
+Running Prowl against five widely deployed open-source projects produced **16 validated exploit PoCs**. Full reports with PoC source, ASAN output, and reproduction steps: [`reports/`](reports/).
 
 | Project | Commit | Findings | Validated PoCs | Report |
 |---------|--------|----------|----------------|--------|
@@ -24,18 +24,18 @@ Running Argus against five widely deployed open-source projects produced **16 va
 | SQLite  | `f02d100e08` | 59 (4 HIGH)  | 3 (SQL injection, 2× signed/unsigned OOB) | [sqlite_f02d100e08.md](reports/sqlite_f02d100e08.md) |
 | Django  | `7dc826b975` | 52 (2 HIGH)  | 2 (pickle RCE in DB cache, MD5 hasher)  | [django_7dc826b975.md](reports/django_7dc826b975.md) |
 
-## Argus vs. SAST
+## Prowl vs. SAST
 
-| Argus | SAST (semgrep, CodeQL) |
+| Prowl | SAST (semgrep, CodeQL) |
 |-------|------------------------|
 | Reasons about *intent*, then proves exploitability | Matches syntactic patterns |
 | Full PoCs — HTTP request, ASAN crash, race demo, brute-force | Source line flags |
 | LLM reasoning; costs tokens, takes minutes | Deterministic, fast, free |
 | Research workbench | Good for CI |
 
-Run both. `semgrep --config auto .` catches known patterns at merge time; `argus scan .` finds the three-step API call sequence that lets an unauthenticated user approve their own refund, then generates the HTTP request sequence that demonstrates it.
+Run both. `semgrep --config auto .` catches known patterns at merge time; `prowl scan .` finds the three-step API call sequence that lets an unauthenticated user approve their own refund, then generates the HTTP request sequence that demonstrates it.
 
-| Domain | What Argus produces |
+| Domain | What Prowl produces |
 |--------|---------------------|
 | Web app vulns | HTTP request sequence proving unauthorized access / invalid state transition |
 | Injection | Crafted input extracting data through the exact sink |
@@ -45,7 +45,7 @@ Run both. `semgrep --config auto .` catches known patterns at merge time; `argus
 
 ## Headline findings
 
-Every finding below was confirmed with an executable PoC inside the Argus Docker sandbox — ASAN crash for memory bugs, shell marker for injection, brute-force for crypto. No version is specifically claimed as unpatched; see each report for the exact commit scanned.
+Every finding below was confirmed with an executable PoC inside the Prowl Docker sandbox — ASAN crash for memory bugs, shell marker for injection, brute-force for crypto. No version is specifically claimed as unpatched; see each report for the exact commit scanned.
 
 ### ffmpeg — 5 validated memory-corruption PoCs
 
@@ -74,7 +74,7 @@ Every finding below was confirmed with an executable PoC inside the Argus Docker
 
 ### Django — 2 validated PoCs
 
-- **Pickle RCE in `DatabaseCache.get_many`.** `django/core/cache/backends/db.py:96` — any attacker with write access to the cache table (e.g. via another SQLi, leaked creds, or a shared DB) achieves RCE through `pickle.loads`. Known-by-design but Argus flagged and exploited it end-to-end.
+- **Pickle RCE in `DatabaseCache.get_many`.** `django/core/cache/backends/db.py:96` — any attacker with write access to the cache table (e.g. via another SQLi, leaked creds, or a shared DB) achieves RCE through `pickle.loads`. Known-by-design but Prowl flagged and exploited it end-to-end.
 - **`MD5PasswordHasher` still shipped.** `django/contrib/auth/hashers.py` — brute-force PoC against the hasher runs in the sandbox; only exploitable on deliberately misconfigured deployments, but demonstrates accurate rubric-matching on a legacy code path.
 
 ### Disclosure
@@ -124,20 +124,20 @@ VULNERABILITY REPORT (text / JSON / SARIF / AI / Markdown)
 
 ## Installation
 
-From PyPI (published as `argus-sec`; the CLI command and import name stay `argus`):
+From PyPI (published as `prowl-sec`; the CLI command and import name stay `prowl`):
 
 ```bash
-pip install "argus-sec[anthropic]"   # Anthropic (default)
-pip install "argus-sec[openai]"      # OpenAI
-pip install "argus-sec[google]"      # Google
-pip install "argus-sec[ollama]"      # Ollama (local models)
-pip install "argus-sec[all-llm]"     # All providers
+pip install "prowl-sec[anthropic]"   # Anthropic (default)
+pip install "prowl-sec[openai]"      # OpenAI
+pip install "prowl-sec[google]"      # Google
+pip install "prowl-sec[ollama]"      # Ollama (local models)
+pip install "prowl-sec[all-llm]"     # All providers
 ```
 
 From source (editable, for development):
 
 ```bash
-cd argus
+cd prowl
 pip install -e ".[dev,anthropic]"    # Anthropic (default)
 pip install -e ".[dev,openai]"       # OpenAI
 pip install -e ".[dev,google]"       # Google
@@ -148,13 +148,13 @@ pip install -e ".[dev,all-llm]"      # All providers
 If you cannot do an editable install (e.g., missing setuptools), set `PYTHONPATH` directly:
 
 ```bash
-export PYTHONPATH=/path/to/argus/src
+export PYTHONPATH=/path/to/prowl/src
 ```
 
 Verify the install:
 
 ```bash
-python -m argus --help
+python -m prowl --help
 ```
 
 ## LLM Configuration
@@ -167,7 +167,7 @@ export OPENAI_API_KEY=your-key       # for OpenAI
 export GOOGLE_API_KEY=your-key       # for Google
 ```
 
-Configure the provider and model in `argus.yml`:
+Configure the provider and model in `prowl.yml`:
 
 ```yaml
 llm:
@@ -199,50 +199,50 @@ llm:
 
 ```bash
 # Full scan on a project
-argus scan /path/to/project
+prowl scan /path/to/project
 
 # Scan with verbose logging
-argus -v scan /path/to/project
+prowl -v scan /path/to/project
 
 # Specific vulnerability categories only
-argus scan --categories memory,auth,injection /path/to/project
+prowl scan --categories memory,auth,injection /path/to/project
 
 # Output formats: text (default), json, sarif, ai, markdown
-argus scan --format json /path/to/project
-argus scan --format sarif /path/to/project > results.sarif
-argus scan --format ai /path/to/project
-argus scan --format markdown /path/to/project
+prowl scan --format json /path/to/project
+prowl scan --format sarif /path/to/project > results.sarif
+prowl scan --format ai /path/to/project
+prowl scan --format markdown /path/to/project
 
 # Write report to a file
-argus scan --format markdown -o report.md /path/to/project
-argus scan --format json -o results.json /path/to/project
+prowl scan --format markdown -o report.md /path/to/project
+prowl scan --format json -o results.json /path/to/project
 
 # Generate patches for confirmed findings
-argus scan --fix /path/to/project
+prowl scan --fix /path/to/project
 
 # Resume an interrupted scan
-argus scan --resume /path/to/project
+prowl scan --resume /path/to/project
 
 # Force full rescan (ignore cache)
-argus scan --no-cache /path/to/project
+prowl scan --no-cache /path/to/project
 
 # Override PoC iteration budget
-argus scan --iterations 8 /path/to/project
+prowl scan --iterations 8 /path/to/project
 ```
 
 ### Managing findings
 
 ```bash
 # Check scan status
-argus status
+prowl status
 
 # List findings (from last scan)
-argus findings
-argus findings --severity critical,high
-argus findings --category auth,injection
+prowl findings
+prowl findings --severity critical,high
+prowl findings --category auth,injection
 
 # Suppress a false positive
-argus suppress argus-sqli-handler.py-84 --reason "input validated in middleware" --scope function
+prowl suppress prowl-sqli-handler.py-84 --reason "input validated in middleware" --scope function
 
 # Suppression scopes:
 #   finding   - this exact finding
@@ -250,16 +250,16 @@ argus suppress argus-sqli-handler.py-84 --reason "input validated in middleware"
 #   rule      - all findings matching this rule in this file
 #   project   - all findings matching this rule project-wide
 
-# Report a vulnerability Argus missed
-argus missed src/handlers/admin.py:47 --category auth --description "missing admin check on delete endpoint"
+# Report a vulnerability Prowl missed
+prowl missed src/handlers/admin.py:47 --category auth --description "missing admin check on delete endpoint"
 
 # Clean up persisted scan state
-argus clean-state
+prowl clean-state
 ```
 
 ## PoC validation via Claw Code
 
-Layer 3 validation uses [Claw Code](https://github.com/ultraworkers/claw-code) as an autonomous agent inside the Docker sandbox. Instead of generating PoC code in a single LLM call, Claw autonomously writes, compiles, debugs, and runs PoCs using its own tool loop (bash, file read/write). It compiles against the actual target source and iterates on build errors without round-tripping through Argus.
+Layer 3 validation uses [Claw Code](https://github.com/ultraworkers/claw-code) as an autonomous agent inside the Docker sandbox. Instead of generating PoC code in a single LLM call, Claw autonomously writes, compiles, debugs, and runs PoCs using its own tool loop (bash, file read/write). It compiles against the actual target source and iterates on build errors without round-tripping through Prowl.
 
 ```yaml
 validation:
@@ -269,11 +269,11 @@ validation:
   claw_api_key_env: null       # API key env var forwarded to container (auto-detected)
 ```
 
-The Claw container needs network access for LLM API calls. See the [spec](argus.md) for the full security model.
+The Claw container needs network access for LLM API calls. See the [spec](prowl.md) for the full security model.
 
 ## Configuration
 
-Create `argus.yml` in your project root. All fields are optional.
+Create `prowl.yml` in your project root. All fields are optional.
 
 <details>
 <summary><b>Full defaults (click to expand)</b></summary>
@@ -365,7 +365,7 @@ output:
 
 resume:
   enabled: true
-  state_dir: ".argus/scan-state"
+  state_dir: ".prowl/scan-state"
 
 llm:
   provider: "anthropic"              # openai | anthropic | google | ollama
@@ -394,10 +394,10 @@ llm:
 
 ### Custom rubrics
 
-Add custom detection rules by placing YAML files in `.argus/rubrics/`:
+Add custom detection rules by placing YAML files in `.prowl/rubrics/`:
 
 ```yaml
-# .argus/rubrics/custom-ssrf.yml
+# .prowl/rubrics/custom-ssrf.yml
 category: injection
 detection_rules:
   - name: internal_ssrf
@@ -450,24 +450,24 @@ Detailed, self-contained report via `--format markdown`. Designed for sharing wi
 Write to a file with `-o`:
 
 ```bash
-argus scan --format markdown -o report.md /path/to/project
+prowl scan --format markdown -o report.md /path/to/project
 ```
 
 ## Project state
 
-Argus stores runtime state in `.argus/` in the project root:
+Prowl stores runtime state in `.prowl/` in the project root:
 
 | Path | Purpose | VCS |
 |------|---------|-----|
-| `.argus/suppressions.json` | Suppressed findings | Commit (shared across team) |
-| `.argus/missed.json` | Reported false negatives | Commit (shared across team) |
-| `.argus/cache/` | LLM result cache | Gitignore |
-| `.argus/scan-state/` | In-progress scan state for resume | Gitignore |
-| `.argus/calibration/` | Confidence calibration data | Gitignore |
+| `.prowl/suppressions.json` | Suppressed findings | Commit (shared across team) |
+| `.prowl/missed.json` | Reported false negatives | Commit (shared across team) |
+| `.prowl/cache/` | LLM result cache | Gitignore |
+| `.prowl/scan-state/` | In-progress scan state for resume | Gitignore |
+| `.prowl/calibration/` | Confidence calibration data | Gitignore |
 
 ## Vulnerability categories
 
-| Category | Weight | What Argus looks for |
+| Category | Weight | What Prowl looks for |
 |----------|--------|---------------------|
 | `auth` | 1.5 | Missing checks, broken access control, privilege escalation, session fixation |
 | `data_access` | 1.0 | Unscoped queries, IDOR, SQL injection |
@@ -481,7 +481,7 @@ Argus stores runtime state in `.argus/` in the project root:
 
 ## Supported languages
 
-Argus uses tree-sitter for parsing and supports:
+Prowl uses tree-sitter for parsing and supports:
 
 Python, JavaScript, TypeScript, TSX, Java, Go, Rust, C, C++, Ruby, PHP
 
@@ -508,14 +508,14 @@ coverage run -m pytest tests/ && coverage report
 ### Linting
 
 ```bash
-ruff check src/argus/
-ruff check src/argus/ --fix    # auto-fix
+ruff check src/prowl/
+ruff check src/prowl/ --fix    # auto-fix
 ```
 
 ### Project structure
 
 ```
-src/argus/
+src/prowl/
     models/          # Pydantic v2 data models (core, scan, context, finding, etc.)
     recon/           # Reconnaissance: parsing, extraction, signals, scoring, call graph
     context_builder/ # Context assembly for each layer, framework/sanitizer detection
@@ -530,7 +530,7 @@ src/argus/
     suppression/     # False positive/negative management
     output/          # Text, JSON, SARIF 2.1.0, AI, Markdown output formats
     cli.py           # Click CLI
-    config.py        # argus.yml loading
+    config.py        # prowl.yml loading
 
 tests/
     fixtures/        # Intentionally vulnerable codebases (Python, C, Node.js)
@@ -554,8 +554,8 @@ tests/
 - **No cross-service chains.** Analysis operates within a single repository.
 - **No cross-language taint tracking.** In multi-language projects (Python calling C via FFI), each language is analyzed independently.
 - **Call graph is approximate.** Dynamic dispatch, callbacks, and metaprogramming create gaps. The LLM compensates using context, but precision varies by language.
-- **Not a CI gate.** Argus is a research tool, not a linter. CI pipelines should use deterministic tools.
+- **Not a CI gate.** Prowl is a research tool, not a linter. CI pipelines should use deterministic tools.
 
 ## Spec
 
-The full specification is in [`argus.md`](argus.md).
+The full specification is in [`prowl.md`](prowl.md).

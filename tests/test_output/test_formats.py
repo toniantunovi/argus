@@ -4,15 +4,15 @@ from datetime import datetime, timezone
 
 import pytest
 
-from argus.models.core import Severity, SignalCategory
-from argus.models.finding import Finding, Classification
-from argus.models.output import Report
-from argus.models.scan import ScanProgress, ScanStatus, BudgetState
-from argus.output.formatter import format_report
-from argus.output.text import render_text
-from argus.output.json_output import render_json
-from argus.output.sarif import render_sarif
-from argus.output.ai_output import render_ai
+from prowl.models.core import Severity, SignalCategory
+from prowl.models.finding import Finding, Classification
+from prowl.models.output import Report
+from prowl.models.scan import ScanProgress, ScanStatus, BudgetState
+from prowl.output.formatter import format_report
+from prowl.output.text import render_text
+from prowl.output.json_output import render_json
+from prowl.output.sarif import render_sarif
+from prowl.output.ai_output import render_ai
 
 
 def _make_report(findings=None):
@@ -28,8 +28,8 @@ def _make_report(findings=None):
     if findings is None:
         findings = [
             Finding(
-                finding_id="argus-injection-app.py-10",
-                stable_id="argus-injection-app.py::get_user",
+                finding_id="prowl-injection-app.py-10",
+                stable_id="prowl-injection-app.py::get_user",
                 title="SQL Injection in get_user",
                 description="f-string SQL allows injection",
                 severity=Severity.HIGH,
@@ -44,8 +44,8 @@ def _make_report(findings=None):
                 end_line=20,
             ),
             Finding(
-                finding_id="argus-auth-app.py-30",
-                stable_id="argus-auth-app.py::delete_user",
+                finding_id="prowl-auth-app.py-30",
+                stable_id="prowl-auth-app.py::delete_user",
                 title="Missing Auth on delete_user",
                 description="No authorization check",
                 severity=Severity.MEDIUM,
@@ -141,7 +141,7 @@ class TestSarifFormat:
         output = render_sarif(report)
         data = json.loads(output)
         tool = data["runs"][0]["tool"]["driver"]
-        assert tool["name"] == "Argus"
+        assert tool["name"] == "Prowl"
         assert "rules" in tool
 
     def test_sarif_results_count(self):
@@ -171,10 +171,10 @@ class TestSarifFormat:
         data = json.loads(output)
         results = data["runs"][0]["results"]
         # HIGH severity -> error level
-        high_result = next(r for r in results if r["properties"]["argus-finding-id"] == "argus-injection-app.py-10")
+        high_result = next(r for r in results if r["properties"]["prowl-finding-id"] == "prowl-injection-app.py-10")
         assert high_result["level"] == "error"
         # MEDIUM severity -> warning level
-        medium_result = next(r for r in results if r["properties"]["argus-finding-id"] == "argus-auth-app.py-30")
+        medium_result = next(r for r in results if r["properties"]["prowl-finding-id"] == "prowl-auth-app.py-30")
         assert medium_result["level"] == "warning"
 
     def test_sarif_empty_findings(self):

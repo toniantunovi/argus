@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from argus.recon.exclusions import (
+from prowl.recon.exclusions import (
     EXCLUDED_DIRS,
     GENERATED_FILE_PATTERNS,
     GENERATED_MARKERS,

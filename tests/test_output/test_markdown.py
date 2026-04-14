@@ -3,12 +3,12 @@ from datetime import datetime, timezone
 
 import pytest
 
-from argus.models.core import Severity, SignalCategory
-from argus.models.finding import Finding, Classification
-from argus.models.output import Report
-from argus.models.scan import ScanProgress, ScanStatus, BudgetState
-from argus.output.formatter import format_report
-from argus.output.markdown import render_markdown
+from prowl.models.core import Severity, SignalCategory
+from prowl.models.finding import Finding, Classification
+from prowl.models.output import Report
+from prowl.models.scan import ScanProgress, ScanStatus, BudgetState
+from prowl.output.formatter import format_report
+from prowl.output.markdown import render_markdown
 
 
 def _make_report(findings=None):
@@ -28,8 +28,8 @@ def _make_report(findings=None):
 
 def _sqli_finding():
     return Finding(
-        finding_id="argus-injection-app.py-10",
-        stable_id="argus-injection-app.py::get_user",
+        finding_id="prowl-injection-app.py-10",
+        stable_id="prowl-injection-app.py::get_user",
         title="SQL Injection in get_user",
         description="f-string SQL allows injection via user_id parameter.",
         severity=Severity.HIGH,
@@ -53,8 +53,8 @@ def _sqli_finding():
 
 def _memory_finding_validated():
     return Finding(
-        finding_id="argus-memory-buffer.c-42",
-        stable_id="argus-memory-buffer.c::parse_input",
+        finding_id="prowl-memory-buffer.c-42",
+        stable_id="prowl-memory-buffer.c::parse_input",
         title="Heap Buffer Overflow in parse_input",
         description="memcpy with unchecked length causes heap overflow.",
         severity=Severity.CRITICAL,
@@ -84,8 +84,8 @@ def _memory_finding_validated():
 
 def _unvalidated_finding():
     return Finding(
-        finding_id="argus-auth-routes.py-100",
-        stable_id="argus-auth-routes.py::delete_user",
+        finding_id="prowl-auth-routes.py-100",
+        stable_id="prowl-auth-routes.py::delete_user",
         title="Missing Auth on delete_user",
         description="No authorization check on destructive endpoint.",
         severity=Severity.MEDIUM,
@@ -102,7 +102,7 @@ def _unvalidated_finding():
 class TestMarkdownHeader:
     def test_contains_title(self):
         md = render_markdown(_make_report())
-        assert "# Argus Scan Report" in md
+        assert "# Prowl Scan Report" in md
 
     def test_contains_status(self):
         md = render_markdown(_make_report())
@@ -145,7 +145,7 @@ class TestMarkdownFindings:
 
     def test_finding_metadata(self):
         md = render_markdown(_make_report())
-        assert "`argus-injection-app.py-10`" in md
+        assert "`prowl-injection-app.py-10`" in md
         assert "injection" in md
         assert "90%" in md
 
@@ -256,7 +256,7 @@ class TestMarkdownChains:
                 "chain_type": "auth_bypass_to_data_access",
                 "combined_severity": "critical",
                 "description": "Auth bypass enables SQL injection on admin endpoint.",
-                "finding_ids": ["argus-auth-app.py-30", "argus-injection-app.py-10"],
+                "finding_ids": ["prowl-auth-app.py-30", "prowl-injection-app.py-10"],
             }
         ]
         md = render_markdown(report)
@@ -273,7 +273,7 @@ class TestMarkdownFormatDispatch:
     def test_dispatch(self):
         report = _make_report()
         md = format_report(report, "markdown")
-        assert "# Argus Scan Report" in md
+        assert "# Prowl Scan Report" in md
 
     def test_is_valid_markdown(self):
         """Basic structural check: headers, code fences balance."""

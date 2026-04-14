@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from argus.config import LLMConfig, LLMLayerConfig
-from argus.llm.langchain_client import LangChainClient
+from prowl.config import LLMConfig, LLMLayerConfig
+from prowl.llm.langchain_client import LangChainClient
 
 
 @pytest.fixture
@@ -181,7 +181,7 @@ class TestParsing:
         assert len(result) == 2
 
     def test_parse_response_with_pydantic(self, default_config):
-        from argus.models.hypothesis import HypothesisResponse
+        from prowl.models.hypothesis import HypothesisResponse
         client = LangChainClient(default_config)
         text = '{"hypotheses": [], "analysis_notes": "none"}'
         result = client._parse_response(text, HypothesisResponse)
@@ -467,7 +467,7 @@ int main() {
     def test_parse_response_coerces_invalid_category(self, default_config):
         """End-to-end: LLM returns an invalid category label, parser should
         coerce it and succeed."""
-        from argus.models.hypothesis import HypothesisResponse
+        from prowl.models.hypothesis import HypothesisResponse
         client = LangChainClient(default_config)
         text = (
             '{"hypotheses": [{"title": "t", "description": "d", '
@@ -482,8 +482,8 @@ int main() {
 
 class TestFactory:
     def test_create_llm_client_returns_langchain(self):
-        from argus.config import ArgusConfig
-        from argus.llm.sampling import create_llm_client
+        from prowl.config import ArgusConfig
+        from prowl.llm.sampling import create_llm_client
         config = ArgusConfig()
         client = create_llm_client(config)
         assert isinstance(client, LangChainClient)
