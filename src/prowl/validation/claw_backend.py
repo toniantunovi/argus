@@ -262,6 +262,8 @@ class ClawValidationBackend:
             ]
 
         func_name = target.function.name
+        is_server = bool(context.server_indicators)
+
         parts = [
             "## Phase 1: Explore Build System",
             "- Examine /app/target for CMakeLists.txt, configure, configure.ac, Makefile, meson.build",
@@ -275,12 +277,75 @@ class ClawValidationBackend:
             "- If dependencies are missing, install them with apt-get and retry",
             "- DO NOT write standalone PoC code. Build the actual project.",
             "",
+        ]
+
+        if is_server:
+            parts.extend(self._c_cpp_server_phases(func_name, context))
+        else:
+            parts.extend(self._c_cpp_cli_phases(func_name))
+
+        return parts
+
+    def _c_cpp_server_phases(
+        self, func_name: str, context: ExploitContext,
+    ) -> list[str]:
+        """Phases 3-5 for C/C++ server/daemon projects (Redis, nginx, memcached, etc.)."""
+        indicators = ", ".join(context.server_indicators)
+        return [
+            "## Phase 3: Identify Server Binary and Client",
+            f"- This project is a **network server** (detected: {indicators})",
+            f"- The vulnerable function is `{func_name}`",
+            "- Identify:",
+            "  - Which compiled binary is the server (check Makefile targets, README, src/ layout)",
+            "  - What port it listens on (check config files, default port, command-line flags)",
+            "  - What protocol it speaks (HTTP, custom TCP, Redis protocol, etc.)",
+            "  - What client tool to use (curl, nc/netcat, the project's own CLI client, redis-cli, etc.)",
+            "  - What command or request reaches the vulnerable function through the call chain",
+            "",
+            "## Phase 4: Start Server, Connect, and Send Crafted Input",
+            "- Write a test script (test.sh) in /app/work that does the following steps:",
+            "  1. Set ASAN_OPTIONS=detect_leaks=0:abort_on_error=0:log_path=/app/work/asan.log",
+            "  2. Start the instrumented server in background:",
+            "     ./server-binary [flags] &",
+            "     SERVER_PID=$!",
+            "  3. Wait for it to be ready:",
+            "     - Try: until nc -z localhost <port> 2>/dev/null; do sleep 0.5; done",
+            "     - Or check stdout/log for 'ready', 'listening', 'started'",
+            "     - Timeout after 30 seconds if it never starts",
+            "  4. Send crafted commands/requests via the client:",
+            "     - Use the project's own CLI client if available (e.g. redis-cli, mysql, psql)",
+            "     - Or use nc/netcat for raw TCP protocols",
+            "     - Or use curl for HTTP servers",
+            "     - Send input designed to reach the vulnerable function through the call chain",
+            "  5. Capture the server's stderr and the ASAN log file for sanitizer output",
+            "  6. Kill the server: kill $SERVER_PID; wait $SERVER_PID 2>/dev/null",
+            '  7. If ASAN/UBSAN fired (check asan.log and stderr), print "ARGUS_VALIDATED"',
+            "- Run the test script and observe the output",
+            "",
+            "## Phase 5: Verify Reachability",
+            f"- If ASAN fires, verify the stack trace includes `{func_name}`",
+            "- If ASAN does not fire, the vulnerable code was not reached — adjust your commands and retry",
+            "- Common issues:",
+            "  - Wrong port or protocol — check server startup output",
+            "  - Server requires authentication — check for default credentials or --no-auth flags",
+            "  - Server requires a config file — create a minimal one or use --default flags",
+            "  - Vulnerable path requires specific server state — send setup commands first",
+            "- You must confirm that the ACTUAL vulnerable function was exercised, not a different bug",
+            "- Note: if the server crashes from ASAN, it may not respond to the client — this is expected",
+            "",
+        ]
+
+    def _c_cpp_cli_phases(self, func_name: str) -> list[str]:
+        """Phases 3-5 for C/C++ CLI/library projects (jq, curl, etc.)."""
+        return [
             "## Phase 3: Identify Trigger Path",
             f"- The vulnerable function is `{func_name}`",
             "- Based on the call chain above, identify:",
             "  - Which compiled binary/executable exercises this function",
             "  - What input reaches it (CLI args, file input, stdin, network data)",
             "- Trace from the entry point through the call chain to the vulnerable function",
+            "- Note: if this project is a network server/daemon, start it in background,",
+            "  wait for it to listen, connect with the appropriate client, and send crafted commands.",
             "",
             "## Phase 4: Craft Input and Run",
             "- Write a test script (test.sh) in /app/work that:",
@@ -295,7 +360,6 @@ class ClawValidationBackend:
             "- You must confirm that the ACTUAL vulnerable function was exercised, not a different bug",
             "",
         ]
-        return parts
 
     def _build_python_phases(
         self, finding: Finding, target: Target, context: ExploitContext,
@@ -391,58 +455,132 @@ class ClawValidationBackend:
         """Phased prompt for Go projects: go build with race detector, run binary."""
         func_name = target.function.name
         race_flag = "-race" if finding.category == SignalCategory.CONCURRENCY else ""
-        return [
+        is_server = bool(context.server_indicators)
+
+        parts = [
             "## Phase 1: Explore and Build",
             "- Copy: cp -r /app/target /app/work/src && cd /app/work/src",
             "- Check go.mod for module path and dependencies",
             f"- Build: go build {race_flag} -o /app/work/binary ./...",
             "  (adjust the build target based on the project's cmd/ directory structure)",
-            "- If it is a web server, also identify the port it listens on",
-            "",
-            "## Phase 2: Identify Trigger Path",
-            f"- The vulnerable function is `{func_name}`",
-            "- Trace the call chain to identify what input reaches this function",
-            "- Determine: CLI args, HTTP request, file input, or environment variable",
-            "",
-            "## Phase 3: Run with Crafted Input",
-            "- If it is a server, start it in background and send crafted HTTP requests",
-            "- If it is a CLI, run with crafted arguments",
-            "- Write a test script (test.sh) that runs the binary and checks output",
-            '- Print "ARGUS_VALIDATED" if the vulnerability is confirmed',
-            "",
-            "## Phase 4: Verify",
-            f"- Confirm that `{func_name}` was actually executed",
-            "- If using -race, check for race condition detector output",
-            "- Check for any panics, incorrect output, or security violations",
             "",
         ]
+
+        if is_server:
+            indicators = ", ".join(context.server_indicators)
+            parts.extend([
+                "## Phase 2: Start the Server",
+                f"- This project is a **network server** (detected: {indicators})",
+                f"- The vulnerable function is `{func_name}`",
+                "- Identify the port it listens on (check flags, config, README)",
+                "- Start the server in background:",
+                "  /app/work/binary [flags] &",
+                "  SERVER_PID=$!",
+                "- Wait for it to be ready:",
+                "  until nc -z localhost <port> 2>/dev/null; do sleep 0.5; done",
+                "  (timeout after 30 seconds)",
+                "",
+                "## Phase 3: Connect and Send Crafted Requests",
+                "- From the call chain, identify what request/command reaches the vulnerable function",
+                "- Send crafted requests using curl, the project's CLI client, or nc:",
+                "  - HTTP: curl -X POST http://localhost:<port>/path -d '{payload}'",
+                "  - gRPC: use grpcurl or the project's own client",
+                "  - TCP: echo 'payload' | nc localhost <port>",
+                "- Write a test script (test.sh) in /app/work that:",
+                "  1. Starts the server in background",
+                "  2. Waits for readiness",
+                "  3. Sends crafted requests",
+                "  4. Checks server output and response for evidence of exploitation",
+                "  5. Kills the server",
+                '  6. Prints "ARGUS_VALIDATED" if the vulnerability is confirmed',
+                "",
+                "## Phase 4: Verify",
+                f"- Confirm that `{func_name}` was actually executed",
+                "- Check for panics, incorrect output, unauthorized data in response, or security violations",
+                "- If using -race, check for race condition detector output in server stderr",
+                "- If the server requires auth, check for default credentials or --insecure flags",
+                "",
+            ])
+        else:
+            parts.extend([
+                "## Phase 2: Identify Trigger Path",
+                f"- The vulnerable function is `{func_name}`",
+                "- Trace the call chain to identify what input reaches this function",
+                "- Determine: CLI args, HTTP request, file input, or environment variable",
+                "- Note: if this project is a network server, start it in background,",
+                "  wait for it to listen, and send crafted requests via curl/nc/client tool.",
+                "",
+                "## Phase 3: Run with Crafted Input",
+                "- If it is a CLI, run with crafted arguments",
+                "- Write a test script (test.sh) that runs the binary and checks output",
+                '- Print "ARGUS_VALIDATED" if the vulnerability is confirmed',
+                "",
+                "## Phase 4: Verify",
+                f"- Confirm that `{func_name}` was actually executed",
+                "- If using -race, check for race condition detector output",
+                "- Check for any panics, incorrect output, or security violations",
+                "",
+            ])
+
+        return parts
 
     def _build_rust_phases(
         self, finding: Finding, target: Target, context: ExploitContext,
     ) -> list[str]:
         """Phased prompt for Rust projects: cargo build, run binary."""
         func_name = target.function.name
-        return [
+        is_server = bool(context.server_indicators)
+
+        parts = [
             "## Phase 1: Explore and Build",
             "- Copy: cp -r /app/target /app/work/src && cd /app/work/src",
             "- Check Cargo.toml for the crate structure",
             "- Build: cargo build",
             "- For unsafe code bugs, build with: RUSTFLAGS='-Zsanitizer=address' cargo +nightly build",
             "",
-            "## Phase 2: Identify Trigger Path",
-            f"- The vulnerable function is `{func_name}`",
-            "- Trace the call chain to identify what input reaches this function",
-            "",
-            "## Phase 3: Run with Crafted Input",
-            "- Run the built binary with crafted input",
-            "- Write a test script (test.sh) that runs the binary and checks output",
-            '- Print "ARGUS_VALIDATED" if the vulnerability is confirmed',
-            "",
-            "## Phase 4: Verify",
-            f"- Confirm that `{func_name}` was actually exercised",
-            "- Check for panics, sanitizer output (if using nightly + ASAN), or incorrect behavior",
-            "",
         ]
+
+        if is_server:
+            indicators = ", ".join(context.server_indicators)
+            parts.extend([
+                "## Phase 2: Start the Server",
+                f"- This project is a **network server** (detected: {indicators})",
+                f"- The vulnerable function is `{func_name}`",
+                "- Identify the port (check config, CLI flags, README)",
+                "- Start: ./target/debug/binary [flags] &",
+                "  SERVER_PID=$!",
+                "- Wait: until nc -z localhost <port> 2>/dev/null; do sleep 0.5; done",
+                "",
+                "## Phase 3: Send Crafted Requests",
+                "- Send crafted HTTP requests or TCP data to trigger the vulnerability",
+                "- Write a test script (test.sh) that starts, exercises, and kills the server",
+                '- Print "ARGUS_VALIDATED" if confirmed',
+                "",
+                "## Phase 4: Verify",
+                f"- Confirm that `{func_name}` was actually exercised",
+                "- Check for panics, sanitizer output, or incorrect behavior",
+                "- If the server requires auth, check for default credentials or dev-mode flags",
+                "",
+            ])
+        else:
+            parts.extend([
+                "## Phase 2: Identify Trigger Path",
+                f"- The vulnerable function is `{func_name}`",
+                "- Trace the call chain to identify what input reaches this function",
+                "- Note: if this is a server, start it in background and send crafted requests.",
+                "",
+                "## Phase 3: Run with Crafted Input",
+                "- Run the built binary with crafted input",
+                "- Write a test script (test.sh) that runs the binary and checks output",
+                '- Print "ARGUS_VALIDATED" if the vulnerability is confirmed',
+                "",
+                "## Phase 4: Verify",
+                f"- Confirm that `{func_name}` was actually exercised",
+                "- Check for panics, sanitizer output (if using nightly + ASAN), or incorrect behavior",
+                "",
+            ])
+
+        return parts
 
     def _build_java_phases(
         self, finding: Finding, target: Target, context: ExploitContext,

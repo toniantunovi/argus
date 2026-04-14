@@ -70,3 +70,4 @@ class ExploitContext(BaseModel):
     finding_severity: str = "high"
     finding_category: SignalCategory = SignalCategory.AUTH
     build_system_hint: str | None = None
+    server_indicators: list[str] = Field(default_factory=list)

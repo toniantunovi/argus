@@ -1,6 +1,7 @@
 """Main context assembly orchestrator."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from prowl.context_builder.framework import detect_framework
@@ -37,6 +38,77 @@ def detect_build_system(project_root: str) -> str | None:
         if (root / filename).exists():
             return hint
     return None
+
+
+# Server indicator patterns per language group.
+_C_SERVER_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"\blisten\s*\("), "POSIX listen()"),
+    (re.compile(r"\baccept\s*\("), "POSIX accept()"),
+    (re.compile(r"\bbind\s*\([^)]*INADDR"), "socket bind to address"),
+    (re.compile(r"\bevent_base_dispatch\b"), "libevent event loop"),
+    (re.compile(r"\bev_run\b"), "libev event loop"),
+    (re.compile(r"\bepoll_create\b"), "epoll event loop"),
+    (re.compile(r"\buv_listen\b"), "libuv server"),
+    (re.compile(r"\baeMain\b"), "ae event loop (Redis-style)"),
+    (re.compile(r"\baeCreateEventLoop\b"), "ae event loop creation"),
+    (re.compile(r"\bselect\s*\([^)]*nfds"), "select loop"),
+    (re.compile(r"\bpoll\s*\([^)]*pollfd"), "poll loop"),
+    (re.compile(r"\bMHD_start_daemon\b"), "libmicrohttpd server"),
+]
+
+_GO_SERVER_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"http\.ListenAndServe"), "HTTP server"),
+    (re.compile(r"\.ListenAndServeTLS\b"), "HTTPS server"),
+    (re.compile(r"net\.Listen\b"), "TCP/UDP listener"),
+    (re.compile(r"grpc\.NewServer\b"), "gRPC server"),
+    (re.compile(r"gin\.Default\b"), "Gin HTTP framework"),
+    (re.compile(r"echo\.New\b"), "Echo HTTP framework"),
+    (re.compile(r"fiber\.New\b"), "Fiber HTTP framework"),
+    (re.compile(r"mux\.NewRouter\b"), "Gorilla Mux router"),
+    (re.compile(r"chi\.NewRouter\b"), "Chi router"),
+]
+
+_RUST_SERVER_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"TcpListener::bind\b"), "TCP listener"),
+    (re.compile(r"HttpServer::new\b"), "actix-web server"),
+    (re.compile(r"axum::Router\b"), "Axum server"),
+    (re.compile(r"warp::serve\b"), "Warp server"),
+    (re.compile(r"rocket::build\b"), "Rocket server"),
+    (re.compile(r"hyper::Server\b"), "Hyper server"),
+    (re.compile(r"tonic::transport::Server\b"), "tonic gRPC server"),
+]
+
+_SERVER_PATTERNS_BY_LANGUAGE: dict[str, list[tuple[re.Pattern, str]]] = {
+    "c": _C_SERVER_PATTERNS,
+    "cpp": _C_SERVER_PATTERNS,
+    "go": _GO_SERVER_PATTERNS,
+    "rust": _RUST_SERVER_PATTERNS,
+}
+
+
+def detect_server_indicators(
+    language: str, functions: dict[str, Function],
+) -> list[str]:
+    """Detect if the project runs as a network server/daemon.
+
+    Scans all functions in the matching language for socket, event loop,
+    and HTTP server patterns.  Returns a list of human-readable indicator
+    strings (empty if nothing found).
+    """
+    patterns = _SERVER_PATTERNS_BY_LANGUAGE.get(language, [])
+    if not patterns:
+        return []
+
+    indicators: list[str] = []
+    seen: set[str] = set()
+    for func in functions.values():
+        if func.language != language:
+            continue
+        for pattern, description in patterns:
+            if description not in seen and pattern.search(func.source):
+                indicators.append(description)
+                seen.add(description)
+    return indicators
 
 
 class ContextBuilder:
@@ -102,6 +174,7 @@ class ContextBuilder:
         rubric = load_rubric("exploit", [finding_category], target.score.rubric_tier)
         framework = detect_framework(func, self.functions)
         build_hint = detect_build_system(self.project_root) if self.project_root else None
+        server_indicators = detect_server_indicators(func.language, self.functions)
         return ExploitContext(
             target_source=func.source,
             target_name=func.name,
@@ -118,6 +191,7 @@ class ContextBuilder:
             finding_severity=finding_severity,
             finding_category=finding_category,
             build_system_hint=build_hint,
+            server_indicators=server_indicators,
         )
 
     def _get_caller_sources(self, func: Function, max_hops: int = 2) -> list[str]:

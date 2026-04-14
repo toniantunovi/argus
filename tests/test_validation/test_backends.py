@@ -60,6 +60,7 @@ def exploit_context():
     ctx.finding_category = SignalCategory.MEMORY
     ctx.finding_severity = "high"
     ctx.language = "c"
+    ctx.server_indicators = []
     return ctx
 
 
@@ -648,6 +649,199 @@ class TestTargetFunctionInTrace:
         outcome = claw_backend._parse_result(memory_finding, result)
         assert outcome.status == ValidationStatus.CONFIRMED
         assert outcome.success_evidence == "marker"
+
+
+class TestServerModePrompt:
+    """Tests for server-mode C/C++ and Go prompt generation."""
+
+    def test_c_server_mode_has_start_server_phase(self, claw_backend, memory_finding, target, exploit_context):
+        exploit_context.server_indicators = ["POSIX listen()", "POSIX accept()"]
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "network server" in prompt
+        assert "POSIX listen()" in prompt
+        assert "Start Server" in prompt or "Start the Server" in prompt or "SERVER_PID" in prompt
+        assert "Kill the server" in prompt or "kill $SERVER_PID" in prompt
+
+    def test_c_server_mode_has_asan_log_path(self, claw_backend, memory_finding, target, exploit_context):
+        exploit_context.server_indicators = ["ae event loop (Redis-style)"]
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "asan.log" in prompt or "ASAN_OPTIONS" in prompt
+
+    def test_c_server_mode_mentions_client_tools(self, claw_backend, memory_finding, target, exploit_context):
+        exploit_context.server_indicators = ["POSIX listen()"]
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "nc" in prompt or "netcat" in prompt or "curl" in prompt or "redis-cli" in prompt
+
+    def test_c_server_mode_wait_for_ready(self, claw_backend, memory_finding, target, exploit_context):
+        exploit_context.server_indicators = ["POSIX listen()"]
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "wait" in prompt.lower() or "ready" in prompt.lower() or "nc -z" in prompt
+
+    def test_c_cli_mode_when_no_indicators(self, claw_backend, memory_finding, target, exploit_context):
+        exploit_context.server_indicators = []
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "Identify Trigger Path" in prompt
+        assert "Craft Input and Run" in prompt
+        # Should still have a fallback note about servers
+        assert "server" in prompt.lower()
+
+    def test_c_cli_mode_still_mentions_server_fallback(self, claw_backend, memory_finding, target, exploit_context):
+        exploit_context.server_indicators = []
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "network server" in prompt.lower() or "server/daemon" in prompt.lower()
+
+    def test_go_server_mode(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "go"
+        memory_finding.category = SignalCategory.AUTH
+        exploit_context.server_indicators = ["HTTP server", "Gorilla Mux router"]
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "network server" in prompt
+        assert "HTTP server" in prompt
+        assert "SERVER_PID" in prompt
+
+    def test_go_cli_mode(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "go"
+        memory_finding.category = SignalCategory.INJECTION
+        exploit_context.server_indicators = []
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "Identify Trigger Path" in prompt
+
+    def test_rust_server_mode(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "rust"
+        exploit_context.server_indicators = ["actix-web server"]
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "network server" in prompt
+        assert "actix-web server" in prompt
+
+    def test_rust_cli_mode(self, claw_backend, memory_finding, target, exploit_context):
+        target.function.language = "rust"
+        exploit_context.server_indicators = []
+        prompt = claw_backend._build_claw_prompt(memory_finding, target, exploit_context)
+        assert "Identify Trigger Path" in prompt
+
+
+class TestServerIndicatorDetection:
+    """Tests for server indicator detection in the context builder."""
+
+    def test_c_listen_accept_detected(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "c"
+        func.source = "int main() { int fd = socket(AF_INET, SOCK_STREAM, 0); listen(fd, 128); accept(fd, NULL, NULL); }"
+        func.identifier = "main"
+        indicators = detect_server_indicators("c", {"main": func})
+        assert "POSIX listen()" in indicators
+        assert "POSIX accept()" in indicators
+
+    def test_c_epoll_detected(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "c"
+        func.source = "int epfd = epoll_create(1);"
+        func.identifier = "setup_event_loop"
+        indicators = detect_server_indicators("c", {"setup_event_loop": func})
+        assert "epoll event loop" in indicators
+
+    def test_c_redis_style_ae_detected(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "c"
+        func.source = "aeEventLoop *el = aeCreateEventLoop(1024); aeMain(el);"
+        func.identifier = "main"
+        indicators = detect_server_indicators("c", {"main": func})
+        assert "ae event loop (Redis-style)" in indicators
+        assert "ae event loop creation" in indicators
+
+    def test_c_libevent_detected(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "c"
+        func.source = "struct event_base *base = event_base_new(); event_base_dispatch(base);"
+        func.identifier = "main"
+        indicators = detect_server_indicators("c", {"main": func})
+        assert "libevent event loop" in indicators
+
+    def test_c_no_server_patterns(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "c"
+        func.source = "int main(int argc, char *argv[]) { parse_json(argv[1]); return 0; }"
+        func.identifier = "main"
+        indicators = detect_server_indicators("c", {"main": func})
+        assert indicators == []
+
+    def test_go_http_server_detected(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "go"
+        func.source = 'func main() { http.ListenAndServe(":8080", mux.NewRouter()) }'
+        func.identifier = "main"
+        indicators = detect_server_indicators("go", {"main": func})
+        assert "HTTP server" in indicators
+        assert "Gorilla Mux router" in indicators
+
+    def test_go_grpc_detected(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "go"
+        func.source = "s := grpc.NewServer()"
+        func.identifier = "main"
+        indicators = detect_server_indicators("go", {"main": func})
+        assert "gRPC server" in indicators
+
+    def test_go_no_server_patterns(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "go"
+        func.source = "func main() { fmt.Println(processFile(os.Args[1])) }"
+        func.identifier = "main"
+        indicators = detect_server_indicators("go", {"main": func})
+        assert indicators == []
+
+    def test_rust_actix_detected(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "rust"
+        func.source = "HttpServer::new(|| App::new()).bind('0.0.0.0:8080')?.run().await"
+        func.identifier = "main"
+        indicators = detect_server_indicators("rust", {"main": func})
+        assert "actix-web server" in indicators
+
+    def test_unsupported_language_returns_empty(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func = MagicMock()
+        func.language = "python"
+        func.source = "app.run()"
+        func.identifier = "main"
+        indicators = detect_server_indicators("python", {"main": func})
+        assert indicators == []
+
+    def test_cross_language_functions_ignored(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        c_func = MagicMock()
+        c_func.language = "c"
+        c_func.source = "int main() { return 0; }"
+        c_func.identifier = "main"
+        go_func = MagicMock()
+        go_func.language = "go"
+        go_func.source = 'http.ListenAndServe(":8080", nil)'
+        go_func.identifier = "go_main"
+        # Asking for C indicators should not pick up Go patterns
+        indicators = detect_server_indicators("c", {"main": c_func, "go_main": go_func})
+        assert indicators == []
+
+    def test_deduplication(self):
+        from prowl.context_builder.builder import detect_server_indicators
+        func1 = MagicMock()
+        func1.language = "c"
+        func1.source = "listen(fd, 128);"
+        func1.identifier = "setup1"
+        func2 = MagicMock()
+        func2.language = "c"
+        func2.source = "listen(fd2, 64);"
+        func2.identifier = "setup2"
+        indicators = detect_server_indicators("c", {"setup1": func1, "setup2": func2})
+        assert indicators.count("POSIX listen()") == 1
 
 
 class TestEngineRecordsStrategy:
