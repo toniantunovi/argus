@@ -7,15 +7,13 @@ from prowl.llm.sampling import LLMClient
 from prowl.models.context import ExploitContext
 from prowl.models.finding import Finding
 from prowl.models.poc import PatchResult
-from prowl.sandbox.manager import SandboxManager
 
 logger = logging.getLogger(__name__)
 
 
 class PatchGenerator:
-    def __init__(self, llm_client: LLMClient, sandbox: SandboxManager):
+    def __init__(self, llm_client: LLMClient):
         self.llm = llm_client
-        self.sandbox = sandbox
 
     async def generate_patch(self, finding: Finding, context: ExploitContext, max_iterations: int = 3) -> PatchResult | None:
         """Generate and validate a patch for a confirmed finding."""

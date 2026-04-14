@@ -46,8 +46,8 @@ def _sqli_finding():
         poc_validated=True,
         validation_method="marker",
         iterations_used=2,
-        poc_code='import requests\n\nr = requests.get("http://localhost:5000/user?id=1 OR 1=1")\nprint(r.json())\nprint("ARGUS_POC_CONFIRMED")',
-        validation_stdout='{"users": [...]}\nARGUS_POC_CONFIRMED',
+        poc_code='#!/bin/bash\nset -e\ncd /app/work/src && pip install -e .\nflask run --port=8080 &\nsleep 2\ncurl -s "http://localhost:8080/user?id=1 OR 1=1"\necho "ARGUS_VALIDATED"',
+        validation_stdout='{"users": [...]}\nARGUS_VALIDATED',
     )
 
 
@@ -71,7 +71,7 @@ def _memory_finding_validated():
         poc_validated=True,
         validation_method="asan",
         iterations_used=3,
-        poc_code='#include <string.h>\n#include <stdlib.h>\n#include "buffer.h"\n\nint main() {\n    char payload[512];\n    memset(payload, \'A\', sizeof(payload));\n    parse_input(payload, sizeof(payload));\n    return 0;\n}',
+        poc_code='#!/bin/bash\nset -e\ncd /app/work/src\nCFLAGS="-fsanitize=address -g" make -j$(nproc)\necho "AAAA..." | ./parse_input\necho "ARGUS_VALIDATED"',
         validation_stderr="==12345==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x6020000000ff",
         sanitizer_output={
             "sanitizer": "AddressSanitizer",
@@ -166,28 +166,28 @@ class TestMarkdownFindings:
 class TestMarkdownPoC:
     def test_poc_code_block_present(self):
         md = render_markdown(_make_report())
-        assert "#### Proof of Concept" in md
-        assert "```python" in md
-        assert 'requests.get("http://localhost:5000/user?id=1 OR 1=1")' in md
+        assert "#### Test Script" in md
+        assert "```bash" in md
+        assert "curl" in md
 
-    def test_c_poc_code_block(self):
+    def test_memory_poc_code_block(self):
         md = render_markdown(_make_report())
-        assert "```c" in md
-        assert "parse_input(payload, sizeof(payload))" in md
+        assert "```bash" in md
+        assert "parse_input" in md
 
     def test_reproduction_instructions_memory(self):
         md = render_markdown(_make_report())
-        assert "gcc -fsanitize=address" in md
+        assert "Build the project from source with AddressSanitizer" in md
         assert "ASAN violation" in md
 
     def test_reproduction_instructions_injection(self):
         md = render_markdown(_make_report())
-        assert "ARGUS_POC_CONFIRMED" in md
+        assert "ARGUS_VALIDATED" in md
 
     def test_execution_output(self):
         md = render_markdown(_make_report())
         assert "#### Execution Output" in md
-        assert "ARGUS_POC_CONFIRMED" in md
+        assert "ARGUS_VALIDATED" in md
 
     def test_sanitizer_output(self):
         md = render_markdown(_make_report())
@@ -203,7 +203,7 @@ class TestMarkdownPoC:
     def test_no_poc_for_unvalidated(self):
         report = _make_report(findings=[_unvalidated_finding()])
         md = render_markdown(report)
-        assert "#### Proof of Concept" not in md
+        assert "#### Test Script" not in md
         assert "#### Sanitizer Output" not in md
 
     def test_validation_status_shown(self):
@@ -213,30 +213,30 @@ class TestMarkdownPoC:
         assert "asan" in md
 
     def test_failed_poc_code_still_in_report(self):
-        """PoC code from a failed validation attempt must appear in the report."""
+        """Test script from a failed validation attempt must appear in the report."""
         f = _unvalidated_finding()
         f.validation_attempted = True
         f.validation_method = "failed"
-        f.poc_code = 'import requests\nr = requests.get("http://localhost/admin")\nprint(r.status_code)'
+        f.poc_code = '#!/bin/bash\ncurl -s http://localhost/admin'
         f.validation_stderr = "Connection refused"
         report = _make_report(findings=[f])
         md = render_markdown(report)
-        assert "#### Proof of Concept (unconfirmed)" in md
-        assert "requests.get" in md
+        assert "#### Test Script (unconfirmed)" in md
+        assert "curl" in md
         assert "#### Execution Output (stderr)" in md
         assert "Connection refused" in md
 
     def test_partial_poc_code_in_report(self):
-        """PoC code from a partial validation must appear with partial label."""
+        """Test script from a partial validation must appear with partial label."""
         f = _unvalidated_finding()
         f.validation_attempted = True
         f.validation_method = "partial"
-        f.poc_code = '#include <stdio.h>\nint main() { return 0; }'
+        f.poc_code = '#!/bin/bash\n./binary --crash'
         f.validation_stdout = "Segfault observed but no ASAN marker"
         report = _make_report(findings=[f])
         md = render_markdown(report)
-        assert "#### Proof of Concept (partial" in md
-        assert "#include <stdio.h>" in md
+        assert "#### Test Script (partial" in md
+        assert "./binary --crash" in md
         assert "#### Execution Output" in md
         assert "Segfault observed" in md
 
@@ -244,7 +244,7 @@ class TestMarkdownPoC:
         """Both stdout and stderr are shown for confirmed PoCs."""
         md = render_markdown(_make_report())
         assert "#### Execution Output" in md
-        assert "ARGUS_POC_CONFIRMED" in md
+        assert "ARGUS_VALIDATED" in md
 
 
 class TestMarkdownChains:

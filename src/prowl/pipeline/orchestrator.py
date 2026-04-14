@@ -29,7 +29,6 @@ from prowl.recon.prioritizer import prioritize_targets
 from prowl.recon.project_type import detect_project_type
 from prowl.recon.scorer import score_functions
 from prowl.recon.signals import detect_signals
-from prowl.sandbox.manager import SandboxManager
 from prowl.triage.chain_analyzer import ChainAnalyzer
 from prowl.triage.classifier import filter_for_validation
 from prowl.triage.engine import TriageEngine
@@ -42,12 +41,10 @@ class ScanOrchestrator:
         self,
         project_root: Path,
         llm_client: LLMClient,
-        sandbox: SandboxManager,
         config: ArgusConfig | None = None,
     ):
         self.project_root = project_root
         self.llm = llm_client
-        self.sandbox = sandbox
         self.config = config or load_config(project_root)
 
         # Initialize subsystems
@@ -192,8 +189,10 @@ class ScanOrchestrator:
                 to_validate = filter_for_validation(all_findings, self.config.validation.severity_gate)
                 logger.info(f"Running Layer 3 validation on {len(to_validate)} findings...")
                 validation_engine = ValidationEngine(
-                    self.llm, self.sandbox, self.context_builder, self.budget,
+                    self.llm, self.context_builder, self.budget,
                     config=self.config.validation,
+                    sandbox_config=self.config.sandbox,
+                    llm_config=self.config.llm,
                     target_dir=self.project_root,
                     max_concurrent=self.config.concurrency.max_concurrent_validations,
                 )

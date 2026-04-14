@@ -111,16 +111,6 @@ class MockLLMClient:
             "attack_path": "Test attack path",
         }
 
-    async def generate_poc(self, context: ExploitContext) -> dict:
-        self.calls.append(("generate_poc", context.target_name))
-        if "generate_poc" in self.responses:
-            return self.responses["generate_poc"]
-        return {
-            "code": "print('PoC executed')",
-            "language": context.language,
-            "description": "Test PoC",
-        }
-
     async def evaluate_chain(self, findings, rubric) -> dict:
         self.calls.append(("evaluate_chain", len(findings)))
         return {"is_chain": False}
@@ -140,16 +130,5 @@ class MockLLMClient:
 class MockSandboxManager:
     """Mock sandbox for testing."""
 
-    def __init__(self, results: dict | None = None):
-        self.results = results or {}
+    def __init__(self):
         self.calls = []
-
-    async def execute_poc(self, poc_code, language, target_dir, timeout=30, instrumentation=None):
-        self.calls.append(("execute_poc", language))
-        if "execute_poc" in self.results:
-            return self.results["execute_poc"]
-        return {
-            "stdout": "PoC executed successfully\nARGUS_PROOF",
-            "stderr": "",
-            "exit_code": 0,
-        }

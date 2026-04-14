@@ -134,13 +134,6 @@ class LangChainClient:
         response_text = await self._sample(TRIAGE_SYSTEM_PROMPT, prompt, max_tokens=max_tokens, layer="triage")
         return self._parse_json(response_text)
 
-    async def generate_poc(self, context: ExploitContext) -> dict:
-        from prowl.validation.prompts import POC_SYSTEM_PROMPT, build_poc_prompt
-        prompt = build_poc_prompt(context)
-        max_tokens = self._layer_max_tokens("validation", self._DEFAULT_MAX_TOKENS["validation"])
-        response_text = await self._sample(POC_SYSTEM_PROMPT, prompt, max_tokens=max_tokens, layer="validation")
-        return self._parse_poc_response(response_text)
-
     async def evaluate_chain(self, findings: list[Finding], rubric: str) -> dict:
         from prowl.triage.prompts import CHAIN_SYSTEM_PROMPT, build_chain_prompt
         prompt = build_chain_prompt(findings, rubric)
@@ -539,38 +532,3 @@ class LangChainClient:
             self._log_parse_failure("json-array", raw, extracted)
             raise
 
-    def _parse_poc_response(self, text: str) -> dict:
-        """Parse PoC response: code in a fenced block + metadata in JSON.
-
-        Falls back to regular JSON parsing if the fenced-block format isn't found.
-        """
-        import re
-
-        # Try to extract code from a fenced code block
-        fence_match = re.search(
-            r"```(\w+)?\s*\n(.*?)```",
-            text,
-            re.DOTALL,
-        )
-        if fence_match:
-            lang_hint = fence_match.group(1) or ""
-            code = fence_match.group(2).strip()
-
-            # Extract JSON metadata after the code fence
-            after_fence = text[fence_match.end():]
-            metadata: dict = {}
-            try:
-                json_text = self._find_json_object(after_fence)
-                metadata = self._robust_json_loads(json_text)
-            except (json.JSONDecodeError, ValueError):
-                pass
-
-            return {
-                "code": code,
-                "language": metadata.get("language", lang_hint),
-                "description": metadata.get("description", ""),
-                "setup_instructions": metadata.get("setup_instructions", ""),
-            }
-
-        # Fallback: try parsing as regular JSON (old format)
-        return self._parse_json(text)

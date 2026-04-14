@@ -14,7 +14,6 @@ from prowl.llm.sampling import LLMClient
 from prowl.models.core import SignalCategory, Target
 from prowl.models.finding import Classification, Finding
 from prowl.models.poc import ValidationStatus
-from prowl.sandbox.manager import SandboxManager
 from prowl.validation.claw_backend import ClawValidationBackend
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,6 @@ class ValidationEngine:
     def __init__(
         self,
         llm_client: LLMClient,
-        sandbox: SandboxManager,
         context_builder: ContextBuilder,
         budget: TokenBudget,
         config: ValidationConfig | None = None,

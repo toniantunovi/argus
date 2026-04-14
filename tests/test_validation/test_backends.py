@@ -264,13 +264,12 @@ class TestDockerPreFlight:
 class TestEngineUsesClaw:
     def test_engine_creates_claw_backend(self):
         from prowl.validation.engine import ValidationEngine
-        from tests.conftest import MockLLMClient, MockSandboxManager
+        from tests.conftest import MockLLMClient
         from prowl.context_builder.builder import ContextBuilder
         from prowl.llm.budget import TokenBudget
 
         engine = ValidationEngine(
             llm_client=MockLLMClient(),
-            sandbox=MockSandboxManager(),
             context_builder=ContextBuilder(MagicMock(), MagicMock()),
             budget=TokenBudget(),
             target_dir=Path("/tmp/test"),
@@ -284,13 +283,12 @@ class TestEngineFailureLogging:
     @pytest.fixture
     def engine_deps(self):
         from prowl.validation.engine import ValidationEngine
-        from tests.conftest import MockLLMClient, MockSandboxManager
+        from tests.conftest import MockLLMClient
         from prowl.context_builder.builder import ContextBuilder
         from prowl.llm.budget import TokenBudget
 
         return {
             "llm_client": MockLLMClient(),
-            "sandbox": MockSandboxManager(),
             "context_builder": ContextBuilder(MagicMock(), MagicMock()),
             "budget": TokenBudget(),
             "target_dir": Path("/tmp/test"),
@@ -658,13 +656,12 @@ class TestEngineRecordsStrategy:
     @pytest.fixture
     def engine_deps(self):
         from prowl.validation.engine import ValidationEngine
-        from tests.conftest import MockLLMClient, MockSandboxManager
+        from tests.conftest import MockLLMClient
         from prowl.context_builder.builder import ContextBuilder
         from prowl.llm.budget import TokenBudget
 
         return {
             "llm_client": MockLLMClient(),
-            "sandbox": MockSandboxManager(),
             "context_builder": ContextBuilder(MagicMock(), MagicMock()),
             "budget": TokenBudget(),
             "target_dir": Path("/tmp/test"),

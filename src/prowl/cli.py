@@ -51,11 +51,9 @@ def scan(path, categories, output_format, output_file, no_cache, resume, iterati
 
     from prowl.llm.sampling import create_llm_client
     from prowl.pipeline.orchestrator import ScanOrchestrator
-    from prowl.sandbox.manager import DockerSandboxManager
 
     llm_client = create_llm_client(config)
-    sandbox = DockerSandboxManager(config.sandbox)
-    orchestrator = ScanOrchestrator(project_root, llm_client, sandbox, config)
+    orchestrator = ScanOrchestrator(project_root, llm_client, config)
 
     report = asyncio.run(orchestrator.run(resume=resume, categories=cat_list))
     result = format_report(report, output_format)

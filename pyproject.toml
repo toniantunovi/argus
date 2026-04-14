@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prowl-sec"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.11"
 description = "Autonomous vulnerability discovery and exploit validation"
 dependencies = [

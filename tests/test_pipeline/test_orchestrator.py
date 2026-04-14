@@ -8,7 +8,7 @@ from prowl.models.output import Report
 from prowl.models.scan import ScanStatus
 from prowl.pipeline.orchestrator import ScanOrchestrator
 
-from tests.conftest import MockLLMClient, MockSandboxManager
+from tests.conftest import MockLLMClient
 
 
 class TestFullScanPipeline:
@@ -24,12 +24,9 @@ class TestFullScanPipeline:
         config.resume.state_dir = str(tmp_path / "scan-state")
 
         llm = MockLLMClient()
-        sandbox = MockSandboxManager()
-
         orchestrator = ScanOrchestrator(
             project_root=python_app,
             llm_client=llm,
-            sandbox=sandbox,
             config=config,
         )
         report = await orchestrator.run()
@@ -50,12 +47,9 @@ class TestFullScanPipeline:
         config.resume.state_dir = str(tmp_path / "scan-state")
 
         llm = MockLLMClient()
-        sandbox = MockSandboxManager()
-
         orchestrator = ScanOrchestrator(
             project_root=python_app,
             llm_client=llm,
-            sandbox=sandbox,
             config=config,
         )
         report = await orchestrator.run()
@@ -74,12 +68,9 @@ class TestFullScanPipeline:
         config.resume.state_dir = str(tmp_path / "scan-state")
 
         llm = MockLLMClient()
-        sandbox = MockSandboxManager()
-
         orchestrator = ScanOrchestrator(
             project_root=python_app,
             llm_client=llm,
-            sandbox=sandbox,
             config=config,
         )
         report = await orchestrator.run()
@@ -98,12 +89,9 @@ class TestFullScanPipeline:
         config.resume.state_dir = str(tmp_path / "scan-state")
 
         llm = MockLLMClient()
-        sandbox = MockSandboxManager()
-
         orchestrator = ScanOrchestrator(
             project_root=python_app,
             llm_client=llm,
-            sandbox=sandbox,
             config=config,
         )
         await orchestrator.run()

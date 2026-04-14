@@ -167,14 +167,14 @@ def _render_finding(index: int, f: Finding) -> str:
 
     # PoC code — always include when available, even for failed/partial attempts
     if f.poc_code:
-        lang = _guess_language(f)
+        lang = _guess_poc_language(f)
         lines.append("")
         if f.poc_validated:
-            lines.append("#### Proof of Concept")
+            lines.append("#### Test Script")
         elif f.validation_method == "partial":
-            lines.append("#### Proof of Concept (partial — not fully confirmed)")
+            lines.append("#### Test Script (partial — not fully confirmed)")
         else:
-            lines.append("#### Proof of Concept (unconfirmed)")
+            lines.append("#### Test Script (unconfirmed)")
         lines.append("")
         lines.append(_reproduction_instructions(f))
         lines.append("")
@@ -231,34 +231,76 @@ def _render_finding(index: int, f: Finding) -> str:
 
 
 def _reproduction_instructions(f: Finding) -> str:
-    """Build step-by-step reproduction instructions based on category."""
+    """Build step-by-step reproduction instructions for the test script.
+
+    Layer 3 validation builds the real project and runs the actual binary/server
+    with crafted input — it never generates standalone PoC code.  The artifact
+    stored in ``poc_code`` is the test script that was executed inside the
+    Docker sandbox.
+    """
     steps = ["**How to reproduce:**", ""]
     if f.category.value == "memory":
         steps.extend([
-            "1. Save the PoC code below to `poc.c` alongside the target source.",
-            "2. Compile with AddressSanitizer:",
+            "1. Save the test script below as `test.sh` in the project root.",
+            "2. Build the project from source with AddressSanitizer instrumentation:",
             "   ```",
-            "   gcc -fsanitize=address,undefined -fno-omit-frame-pointer -g -o poc poc.c -I. *.c",
+            "   CFLAGS=\"-fsanitize=address,undefined -fno-omit-frame-pointer -g\" ./configure && make -j$(nproc)",
             "   ```",
-            "3. Run `./poc` and observe the ASAN violation in stderr.",
+            "3. Run `bash test.sh` and observe the ASAN violation in stderr.",
         ])
     elif f.category.value in ("injection", "data_access", "auth", "input"):
         steps.extend([
-            "1. Save the PoC code below and ensure the target application is running.",
-            "2. Execute the PoC script.",
-            f"3. Observe the `ARGUS_POC_CONFIRMED` marker in stdout confirming the {f.category.value} vulnerability.",
+            "1. Save the test script below as `test.sh` (or `test.py`) in the project root.",
+            "2. Start the application server (e.g. `flask run`, `npm start`).",
+            "3. Run the test script — it sends crafted requests to the running server.",
+            "4. Observe the `ARGUS_VALIDATED` marker in stdout confirming the vulnerability.",
         ])
     else:
         steps.extend([
-            "1. Save the PoC code below to a file.",
-            "2. Execute it against the target codebase.",
-            "3. Observe the output confirming the vulnerability.",
+            "1. Save the test script below as `test.sh` in the project root.",
+            "2. Build the project from source.",
+            "3. Run the test script against the built binary and observe the output.",
         ])
     return "\n".join(steps)
 
 
+def _guess_poc_language(f: Finding) -> str:
+    """Guess code-fence language for the PoC / test script.
+
+    The PoC is a test script produced by Layer 3, not standalone source in the
+    same language as the target.  Detect the actual content type first (shebang,
+    Python imports, etc.) before falling back to the source-file extension.
+    """
+    code = (f.poc_code or "").lstrip()
+    if code.startswith("#!/bin/bash") or code.startswith("#!/bin/sh") or code.startswith("#!/usr/bin/env bash"):
+        return "bash"
+    if code.startswith("#!/usr/bin/env python") or code.startswith("#!/usr/bin/python"):
+        return "python"
+    if code.startswith("import ") or code.startswith("from "):
+        return "python"
+    # Fall back to source-file extension (useful for patches, not PoCs).
+    path = f.file_path.lower()
+    if path.endswith((".c", ".h")):
+        return "c"
+    if path.endswith((".cpp", ".cc", ".cxx", ".hpp")):
+        return "cpp"
+    if path.endswith(".py"):
+        return "python"
+    if path.endswith((".js", ".mjs")):
+        return "javascript"
+    if path.endswith((".ts", ".tsx")):
+        return "typescript"
+    if path.endswith(".go"):
+        return "go"
+    if path.endswith((".java",)):
+        return "java"
+    if path.endswith((".rs",)):
+        return "rust"
+    return ""
+
+
 def _guess_language(f: Finding) -> str:
-    """Guess language from file extension for code fence."""
+    """Guess language from source-file extension (for patches, not PoCs)."""
     path = f.file_path.lower()
     if path.endswith((".c", ".h")):
         return "c"
